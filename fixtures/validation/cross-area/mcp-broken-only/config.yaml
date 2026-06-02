@@ -1,0 +1,46 @@
+# MCP broken, but dashboard-off, providers healthy (Hermes v24 format)
+# Used by VAL-CROSS-011: Broken MCP fixture -> no provider/dashboard findings
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  openai:
+    api_key_env: OPENAI_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers:
+  database:
+    command: hermes-mcp-database
+    transport: stdio
+    env:
+      - DB_HOST
+      - DB_PORT
+      - DB_PASSWORD
+  missing-binary:
+    command: definitely-not-a-real-binary-that-exists-xyz
+    transport: stdio
+  filesystem:
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+    transport: stdio
+    env:
+      - FS_TOKEN
+  playground:
+    command: hermes-mcp-playground
+    transport: sse
+    env:
+      - PLAYGROUND_SECRET
+
+# No dashboard section - avoids dashboard-reachable broken finding
+
+memory:
+  dir: memory
+  limit_mb: 10

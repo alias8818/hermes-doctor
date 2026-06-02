@@ -1,0 +1,27 @@
+# Provider fixture: custom provider with wrong key format (Hermes v24 format)
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  groq:
+    api_key_env: GROQ_API_KEY
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers: {}
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

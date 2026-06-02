@@ -1,0 +1,32 @@
+# MCP server with npx command — for testing when npx is not on PATH (Hermes v24 format)
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers:
+  filesystem:
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+    transport: stdio
+    env:
+      - FS_TOKEN
+
+dashboard:
+  url: http://127.0.0.1:8080
+  bind: 127.0.0.1
+
+memory:
+  dir: memory
+  limit_mb: 10

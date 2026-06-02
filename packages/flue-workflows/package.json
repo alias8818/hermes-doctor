@@ -1,0 +1,27 @@
+{
+  "name": "@hermes-doctor/flue-workflows",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional Flue enhancement layer for Hermes Doctor.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@flue/runtime": "^0.8.1",
+    "@hermes-doctor/core": "workspace:*",
+    "valibot": "^1.4.1"
+  }
+}

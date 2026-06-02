@@ -1,0 +1,31 @@
+# Provider fixture: custom provider without base_url (Hermes v24 format)
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+custom_providers:
+  - name: my-local-llm
+    api_key_env: MY_LOCAL_KEY
+    models:
+      my-local-model: {}
+
+terminal:
+  backend: local
+
+mcp_servers: {}
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

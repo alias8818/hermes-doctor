@@ -1,0 +1,5 @@
+2025-05-30T10:00:00Z INFO Starting Hermes Agent
+2025-05-30T10:00:05Z ERROR MCP server connection lost: filesystem exited unexpectedly
+2025-05-30T10:00:06Z ERROR 429 Too Many Requests — rate limited by provider
+2025-05-30T10:00:07Z ERROR ECONNREFUSED on 127.0.0.1:8080
+2025-05-30T10:00:08Z ERROR Failed to connect to database: timeout

@@ -1,0 +1,21 @@
+# Malformed YAML — tab characters in mcp_servers section
+profile: default
+providers:
+  default_model: claude-sonnet-4-20250514
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+mcp:
+	servers:	# <-- tab character before servers (invalid YAML)
+    - name: database
+      command: hermes-mcp-database
+      env:
+        - DB_HOST
+
+dashboard:
+  url: http://127.0.0.1:8080
+  bind: 127.0.0.1
+
+memory:
+  dir: memory
+  limit_mb: 10

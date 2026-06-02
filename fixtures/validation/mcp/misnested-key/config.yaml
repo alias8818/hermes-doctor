@@ -1,0 +1,23 @@
+# MCP server nested under non-standard key — servers should be under mcp.servers
+# Here we use mcp.server (singular) which should produce a config warning
+profile: default
+providers:
+  default_model: claude-sonnet-4-20250514
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+mcp:
+  server:  # <-- should be 'servers' (plural), misnested key
+    - name: database
+      command: echo
+      transport: stdio
+      env:
+        - HOME
+
+dashboard:
+  url: http://127.0.0.1:8080
+  bind: 127.0.0.1
+
+memory:
+  dir: memory
+  limit_mb: 10

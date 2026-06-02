@@ -1,0 +1,10 @@
+{
+  "name": "memory-plugin",
+  "version": "1.0.0",
+  "description": "A plugin for redaction testing",
+  "entry": "index.js",
+  "main": "index.js",
+  "hermes": {
+    "minVersion": "0.15.0"
+  }
+}

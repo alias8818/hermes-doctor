@@ -1,0 +1,30 @@
+2025-05-30T10:00:00Z INFO Starting Hermes Agent v0.15.2
+2025-05-30T10:00:01Z INFO Loading configuration from config.yaml
+2025-05-30T10:00:05Z INFO Connecting to provider anthropic
+2025-05-30T10:00:06Z ERROR 401 Unauthorized: Invalid API key for provider anthropic
+2025-05-30T10:00:07Z ERROR 403 Forbidden: Token expired, please refresh
+2025-05-30T10:00:08Z ERROR Authentication failed: provider returned 401
+2025-05-30T10:00:10Z WARN Model claude-opus-99 not found, falling back
+2025-05-30T10:00:10Z ERROR model 'claude-opus-99' not found in provider list
+2025-05-30T10:00:11Z WARN Context window exceeded max tokens for request
+2025-05-30T10:00:12Z ERROR 429 Too Many Requests: rate limit exceeded for API
+2025-05-30T10:00:13Z ERROR Rate limit exceeded, retrying after 30 seconds
+2025-05-30T10:00:14Z ERROR MCP server "database" exited with code 1
+2025-05-30T10:00:15Z ERROR Failed to start MCP server: filesystem crashed on launch
+2025-05-30T10:00:16Z ERROR Tool server "github" connection lost: stdio closed unexpectedly
+2025-05-30T10:00:17Z ERROR ECONNREFUSED on 0.0.0.0:8080 — dashboard port in use?
+2025-05-30T10:00:18Z ERROR Network error: socket hang up on provider endpoint
+2025-05-30T10:00:19Z ERROR Invalid YAML syntax at line 42: mapping values not allowed
+2025-05-30T10:00:20Z ERROR Failed to parse configuration file: unexpected indentation
+2025-05-30T10:00:21Z ERROR EACCES: permission denied, open '/home/user/.hermes/config.yaml'
+2025-05-30T10:00:22Z ERROR access denied: cannot read skills directory
+2025-05-30T10:00:23Z CRITICAL Out of memory: cannot allocate request buffer
+2025-05-30T10:00:24Z ERROR ENOSPC: no space left on device
+2025-05-30T10:00:25Z ERROR Plugin failed to load: Cannot find module 'hermes-plugin-xyz'
+2025-05-30T10:00:26Z ERROR MODULE_NOT_FOUND: Import error — module not resolved
+2025-05-30T10:00:27Z INFO Periodic health check completed
+2025-05-30T10:00:28Z ERROR ETIMEDOUT connecting to provider endpoint
+2025-05-30T10:00:29Z ERROR Quota exhausted for API calls this month
+2025-05-30T10:00:30Z ERROR Heap allocation failed — memory pressure
+2025-05-30T10:00:31Z ERROR operation not permitted: cannot write to log file
+2025-05-30T10:00:32Z INFO Shutting down gracefully

@@ -1,0 +1,32 @@
+# Dashboard fixture: malformed dashboard config (indentation error) (Hermes v24 format)
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers: {}
+
+dashboard:
+  url: http://127.0.0.1:8080
+  bind: 127.0.0.1
+  auth: false
+tls: false
+  # Note: tls is at wrong indentation level — YAML is still valid but section is weird
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

@@ -1,0 +1,5 @@
+name: "Hermes Doctor CodeQL"
+paths-ignore:
+  - "**/node_modules/**"
+  - "**/__tests__/**"
+  - "**/*.test.ts"

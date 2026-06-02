@@ -1,0 +1,15 @@
+2025-05-30T08:00:00Z INFO [gateway] Gateway server started on port 8443
+2025-05-30T08:00:01Z INFO [gateway] Accepting connections from 127.0.0.1
+2025-05-30T08:05:00Z WARN [gateway] High latency detected: request took 12500ms
+2025-05-30T08:10:00Z ERROR [gateway] Connection pool exhausted: all 16 connections in use
+2025-05-30T08:15:00Z ERROR [gateway] Upstream connection failed: connect ECONNREFUSED ::1:8080
+2025-05-30T08:20:00Z WARN [gateway] Retry attempt 1/3 for upstream provider "anthropic"
+2025-05-30T08:25:00Z WARN [gateway] Retry attempt 2/3 for upstream provider "anthropic"
+2025-05-30T08:30:00Z INFO [gateway] Upstream provider "anthropic" recovered after 2 retries
+2025-05-30T09:00:00Z ERROR [gateway] TLS handshake failed: certificate expired
+2025-05-30T09:05:00Z ERROR [gateway] Invalid upstream response: HTTP 502 Bad Gateway
+2025-05-30T09:10:00Z INFO [gateway] Rate limiting activated for endpoint /v1/chat/completions
+2025-05-30T09:15:00Z WARN [gateway] Request queue depth: 47 (threshold: 50)
+2025-05-30T09:20:00Z ERROR [gateway] Request timed out after 60000ms queued
+2025-05-30T09:25:00Z INFO [gateway] Rate limiting deactivated for endpoint /v1/chat/completions
+2025-05-30T10:00:00Z INFO [gateway] Health check passed: 0 errors in last 60 seconds

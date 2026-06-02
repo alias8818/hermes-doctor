@@ -1,0 +1,32 @@
+# Provider fixture: model references provider with no matching section (Hermes v24 format)
+# Models list includes a model with provider field pointing to non-existent section
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+models:
+  - name: claude-sonnet-4-20250514
+    provider: anthropic
+  - name: gpt-4
+    provider: openai
+
+terminal:
+  backend: local
+
+mcp_servers: {}
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

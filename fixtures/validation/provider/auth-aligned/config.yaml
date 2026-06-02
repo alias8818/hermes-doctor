@@ -1,0 +1,29 @@
+# Provider fixture: auth.json active_provider matches config.yaml (aligned, Hermes v24 format)
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+models:
+  - name: claude-sonnet-4-20250514
+    provider: anthropic
+
+terminal:
+  backend: local
+
+mcp_servers: {}
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

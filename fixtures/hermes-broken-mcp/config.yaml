@@ -1,0 +1,47 @@
+# Hermes configuration — MCP servers with missing commands and env vars (Hermes v24 format)
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  openai:
+    api_key_env: OPENAI_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers:
+  database:
+    command: hermes-mcp-database
+    transport: stdio
+    env:
+      - DB_HOST
+      - DB_PORT
+      - DB_PASSWORD
+  missing-binary:
+    command: definitely-not-a-real-binary-that-exists-xyz
+    transport: stdio
+  filesystem:
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+    transport: stdio
+    env:
+      - FS_TOKEN
+  playground:
+    command: hermes-mcp-playground
+    transport: sse
+    env:
+      - PLAYGROUND_SECRET
+
+dashboard:
+  url: http://127.0.0.1:8080
+  bind: 127.0.0.1
+
+memory:
+  dir: memory
+  limit_mb: 10

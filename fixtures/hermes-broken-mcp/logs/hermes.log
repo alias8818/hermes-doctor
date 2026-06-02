@@ -1,0 +1,8 @@
+2025-05-30T12:00:00Z INFO [hermes] Starting Hermes Agent v1.5.0
+2025-05-30T12:00:01Z INFO [config] Loaded configuration from ~/.hermes/config.yaml
+2025-05-30T12:00:01Z ERROR [mcp] Failed to start MCP server "database": command not found: hermes-mcp-database
+2025-05-30T12:00:01Z ERROR [mcp] Failed to start MCP server "missing-binary": command not found: definitely-not-a-real-binary-that-exists-xyz
+2025-05-30T12:00:01Z ERROR [mcp] Failed to start MCP server "playground": command not found: hermes-mcp-playground
+2025-05-30T12:00:01Z WARN [mcp] MCP server "filesystem" missing required env var: FS_TOKEN
+2025-05-30T12:00:01Z INFO [mcp] MCP server "filesystem" started successfully
+2025-05-30T12:00:02Z ERROR [hermes] 3 of 4 MCP servers failed to start

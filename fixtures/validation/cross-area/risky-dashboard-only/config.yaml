@@ -1,0 +1,40 @@
+# Risky dashboard, but valid providers, no MCP servers (Hermes v24 format)
+# Used by VAL-CROSS-013: Dashboard-risky -> no provider/MCP broken/risk
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+terminal:
+  backend: unbounded-shell
+
+# No MCP servers configured (to avoid MCP env var broken)
+
+dashboard:
+  url: http://0.0.0.0:8080
+  bind: 0.0.0.0
+  auth: false
+  tls: false
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins:
+  - name: risky-plugin
+    enabled: true
+    path: /tmp/risky-plugin
+
+security:
+  terminal_backend: unbounded-shell
+  shell_restricted: false
+  sandbox: false

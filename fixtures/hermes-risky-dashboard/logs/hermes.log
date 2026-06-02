@@ -1,0 +1,7 @@
+2025-05-30T14:00:00Z INFO [hermes] Starting Hermes Agent v1.5.0
+2025-05-30T14:00:01Z INFO [config] Loaded configuration from ~/.hermes/config.yaml
+2025-05-30T14:00:01Z WARN [dashboard] Dashboard bound to 0.0.0.0:8080 — accessible from all network interfaces
+2025-05-30T14:00:01Z WARN [dashboard] Dashboard authentication is DISABLED
+2025-05-30T14:00:01Z INFO [dashboard] Dashboard server started on 0.0.0.0:8080
+2025-05-30T14:00:01Z INFO [providers] Anthropic provider initialized
+2025-05-30T14:00:02Z WARN [hermes] Security: 2 potential issues detected

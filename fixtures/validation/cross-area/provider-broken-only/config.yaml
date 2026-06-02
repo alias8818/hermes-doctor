@@ -1,0 +1,36 @@
+# Provider broken, but MCP healthy (no MCP servers), dashboard-off (Hermes v24 format)
+# Used by VAL-CROSS-012: Broken provider fixture -> no MCP/dashboard findings
+_config_version: 24
+profile: default
+
+model:
+  default: claude-opus-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    api_key_env: OPENAI_API_KEY
+  groq:
+    api_key_env: GROQ_API_KEY
+  mistral:
+    api_key_env: MISTRAL_API_KEY
+  cohere:
+    api_key_env: COHERE_API_KEY
+
+terminal:
+  backend: local
+
+# No MCP servers configured - avoids any MCP findings
+
+# No dashboard section - avoids dashboard-reachable broken finding
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

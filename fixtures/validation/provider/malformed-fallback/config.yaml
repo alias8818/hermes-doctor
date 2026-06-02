@@ -1,0 +1,29 @@
+# Provider fixture: malformed fallback provider config (Hermes v24 format)
+# fallback_providers is defined in providers section
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+    fallback_providers: "not-an-array"
+  openai:
+    api_key_env: OPENAI_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers: {}
+
+memory:
+  dir: memory
+  limit_mb: 10
+
+skills:
+  dir: skills
+
+plugins: []

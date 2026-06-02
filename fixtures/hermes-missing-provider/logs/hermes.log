@@ -1,0 +1,9 @@
+2025-05-30T10:00:00Z INFO [hermes] Starting Hermes Agent v1.5.0
+2025-05-30T10:00:01Z INFO [config] Loaded configuration from ~/.hermes/config.yaml
+2025-05-30T10:00:01Z WARN [providers] ANTHROPIC_API_KEY not set — anthropic provider unavailable
+2025-05-30T10:00:01Z WARN [providers] GROQ_API_KEY not set — groq provider unavailable
+2025-05-30T10:00:01Z WARN [providers] MISTRAL_API_KEY not set — mistral provider unavailable
+2025-05-30T10:00:01Z WARN [providers] COHERE_API_KEY not set — cohere provider unavailable
+2025-05-30T10:00:01Z INFO [providers] OpenAI provider initialized (key present)
+2025-05-30T10:00:02Z INFO [mcp] Starting MCP server: filesystem
+2025-05-30T10:00:02Z INFO [hermes] Hermes Agent ready — 1 of 5 providers available

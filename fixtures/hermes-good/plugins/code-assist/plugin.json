@@ -1,0 +1,13 @@
+{
+  "name": "code-assist",
+  "version": "1.2.0",
+  "description": "AI-powered code assistance plugin",
+  "engines": {
+    "hermes": ">=1.0"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "typescript": "^5.7.0",
+    "eslint": "^9.0.0"
+  }
+}

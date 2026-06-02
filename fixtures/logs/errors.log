@@ -1,0 +1,21 @@
+2025-05-30T08:00:01Z ERROR [mcp] Failed to start MCP server "database": command not found: hermes-mcp-database
+2025-05-30T08:00:02Z ERROR [mcp] Failed to start MCP server "playground": command not found: hermes-mcp-playground
+2025-05-30T08:01:15Z ERROR [auth] 401 Unauthorized: Invalid API key for provider "anthropic"
+2025-05-30T08:02:30Z ERROR [network] ECONNREFUSED connection refused to localhost:9090
+2025-05-30T08:05:00Z ERROR [model] Rate limit exceeded for model claude-opus-4-20250514 (HTTP 429)
+2025-05-30T08:05:01Z ERROR [model] Rate limit exceeded for model claude-opus-4-20250514 (HTTP 429)
+2025-05-30T08:05:02Z ERROR [model] Rate limit exceeded for model claude-opus-4-20250514 (HTTP 429)
+2025-05-30T08:10:00Z ERROR [memory] Failed to write to memory file: Disk quota exceeded
+2025-05-30T08:15:00Z ERROR [config] Failed to parse skill manifest: Invalid frontmatter in SKILL.md
+2025-05-30T08:20:00Z ERROR [security] Insecure dashboard detected: bound to 0.0.0.0 with no authentication
+2025-05-30T08:25:00Z ERROR [plugin] Plugin "risky-plugin" failed to load: module not found
+2025-05-30T08:30:00Z ERROR [mcp] MCP server "database" connection lost: transport error
+2025-05-30T09:00:00Z ERROR [auth] 403 Forbidden: Token expired for provider "github"
+2025-05-30T09:05:00Z ERROR [network] Request timeout after 30000ms to api.openai.com
+2025-05-30T09:10:00Z ERROR [model] Rate limit exceeded for model gpt-4o (HTTP 429)
+2025-05-30T09:10:01Z ERROR [model] Rate limit exceeded for model gpt-4o (HTTP 429)
+2025-05-30T09:15:00Z ERROR [auth] 401 Unauthorized: Bearer token rejected
+2025-05-30T09:20:00Z ERROR [permission] Permission denied: cannot read /home/user/.hermes/logs/hermes.log
+2025-05-30T09:25:00Z ERROR [network] DNS lookup failed for api.groq.com
+2025-05-30T09:30:00Z ERROR [mcp] MCP server "filesystem" crashed: SIGSEGV
+2025-05-30T10:00:00Z ERROR [auth] 401 Unauthorized: Invalid API key for provider "openai"

@@ -1,0 +1,35 @@
+# Sentinel: MCP command that would create a file if executed (Hermes v24 format)
+# The command `touch /tmp/hermes-doctor-mcp-sentinel-marker` on PATH would
+# create a marker file if executed. The MCP collector only checks for
+# command existence via `which` — it never executes MCP commands.
+# If the marker file exists after scan, it proves the command was executed.
+_config_version: 24
+profile: default
+
+model:
+  default: claude-sonnet-4-20250514
+  provider: auto
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+
+terminal:
+  backend: local
+
+mcp_servers:
+  sentinel-check:
+    command: touch
+    args:
+      - "/tmp/hermes-doctor-mcp-sentinel-marker"
+    transport: stdio
+    env:
+      - HOME
+
+dashboard:
+  url: http://127.0.0.1:8080
+  bind: 127.0.0.1
+
+memory:
+  dir: memory
+  limit_mb: 10

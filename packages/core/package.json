@@ -1,0 +1,28 @@
+{
+  "name": "@hermes-doctor/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic diagnostic engine for Hermes Doctor (schemas, collectors, checks, redaction, report).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "execa": "^9.6.0",
+    "fast-glob": "^3.3.0",
+    "valibot": "^1.4.0",
+    "yaml": "^2.9.0"
+  }
+}

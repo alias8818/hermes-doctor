@@ -1,0 +1,11 @@
+[2025-05-30T07:55:00] BOOT: Hermes Agent boot sequence started
+[2025-05-30T07:55:01] BOOT: Loading configuration from /home/user/.hermes/config.yaml
+[2025-05-30T07:55:01] BOOT: ERROR - Invalid YAML syntax in config.yaml at line 47
+[2025-05-30T07:55:01] BOOT: ERROR - Failed to parse configuration: unexpected scalar
+[2025-05-30T07:55:01] BOOT: Falling back to default configuration
+[2025-05-30T07:55:02] BOOT: ERROR - Provider "anthropic" requires ANTHROPIC_API_KEY environment variable
+[2025-05-30T07:55:02] BOOT: ERROR - Provider "openai" requires OPENAI_API_KEY environment variable
+[2025-05-30T07:55:02] BOOT: WARNING - No API keys found for any configured provider
+[2025-05-30T07:55:03] BOOT: ERROR - Dashboard bind address 0.0.0.0 exposes service to all network interfaces
+[2025-05-30T07:55:03] BOOT: CRITICAL - Refusing to start with insecure configuration
+[2025-05-30T07:55:03] BOOT: Hermes Agent boot aborted due to 4 critical errors

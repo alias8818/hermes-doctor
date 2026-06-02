@@ -1,0 +1,9 @@
+{
+  "name": "terminal-tools",
+  "version": "0.9.0",
+  "description": "Enhanced terminal operations plugin",
+  "engines": {
+    "hermes": ">=0.9"
+  },
+  "main": "terminal.js"
+}

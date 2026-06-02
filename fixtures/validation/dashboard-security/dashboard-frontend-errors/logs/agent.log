@@ -1,0 +1,11 @@
+2026-05-31 10:00:01 INFO Starting Hermes dashboard
+2026-05-31 10:00:02 INFO Dashboard listening on http://127.0.0.1:8080
+2026-05-31 10:00:05 ERROR React component error: Failed to load model selector for claude-sonnet-4-20250514
+2026-05-31 10:00:06 ERROR Model selector initialization failed: TypeError: Cannot read properties of undefined (reading 'name')
+2026-05-31 10:00:07 ERROR Frontend exception: Uncaught Error: Model provider "anthropic" not found in selector registry
+2026-05-31 10:00:10 ERROR Dashboard WebSocket disconnected: unexpected close
+2026-05-31 10:00:12 ERROR React render error: ModelSelector component crashed
+2026-05-31 10:00:15 WARN Model selection fallback used: default model could not be selected
+2026-05-31 10:00:20 ERROR Cannot load model list from provider: HTTP 500
+2026-05-31 10:00:22 ERROR Exception in dashboard route handler: TypeError: modelRegistry.getModel is not a function
+2026-05-31 10:01:00 INFO Dashboard reconnected successfully

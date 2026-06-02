@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+*.log
+.DS_Store
+coverage/
+hermes-doctor-report/
+.env
+.env.*
+.mission-research/
+research/
+droid-wiki/
+fixtures/hermes-production/
+local-only/

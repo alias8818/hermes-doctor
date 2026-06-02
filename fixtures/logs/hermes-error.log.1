@@ -1,0 +1,12 @@
+2025-05-29T22:00:00Z CRITICAL [hermes] Out of memory: process killed by OOM killer (exit code SIGKILL)
+2025-05-29T22:00:01Z INFO [hermes] Restarting with reduced memory budget
+2025-05-29T22:30:00Z ERROR [memory] Garbage collection failed: heap limit exceeded
+2025-05-29T23:00:00Z CRITICAL [hermes] Fatal error: uncaught exception in event loop
+2025-05-29T23:00:01Z ERROR [hermes] Stack trace: TypeError: Cannot read properties of null (reading 'config')
+    at loadProvider (/usr/local/hermes/lib/providers/index.js:142:23)
+    at async initializeProviders (/usr/local/hermes/lib/providers/index.js:89:5)
+    at async main (/usr/local/hermes/lib/cli.js:45:9)
+2025-05-29T23:30:00Z WARN [mcp] MCP server "database" reconnection attempt 1/5
+2025-05-29T23:30:05Z WARN [mcp] MCP server "database" reconnection attempt 2/5
+2025-05-29T23:30:10Z WARN [mcp] MCP server "database" reconnection attempt 3/5
+2025-05-29T23:30:15Z ERROR [mcp] MCP server "database" reconnection failed after 5 attempts: giving up
