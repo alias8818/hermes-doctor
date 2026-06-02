@@ -1,6 +1,6 @@
 {
   "name": "hermes-doctor",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "type": "module",
   "description": "Local-first health checker CLI for Hermes Agent — scans config, providers, MCP, memory, skills, plugins, logs, and security with redacted reports.",
   "license": "MIT",

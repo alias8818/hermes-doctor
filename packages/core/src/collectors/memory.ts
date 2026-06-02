@@ -16,7 +16,6 @@ import type { MemoryData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
 
 const EMPTY: MemoryData = {};
-const LARGE_FILE_BYTES = 256 * 1024;
 
 /** Known memory-provider plugin name patterns */
 const MEMORY_PROVIDER_NAMES = [
@@ -163,11 +162,11 @@ export async function collectMemory(
       files.push({
         name: entry.name,
         sizeBytes,
-        large: sizeBytes > LARGE_FILE_BYTES,
+        large: sizeBytes > ctx.thresholds.largeFileBytes,
       });
 
       // Scan file contents for secrets if it's a text-like file
-      if (sizeBytes <= LARGE_FILE_BYTES * 4) {
+      if (sizeBytes <= ctx.thresholds.largeFileBytes * 4) {
         const read = await readTextFile(filePath);
         if (read.ok && read.content) {
           const fileSecrets = findMemorySecrets(read.content, entry.name);
@@ -192,8 +191,7 @@ export async function collectMemory(
       );
     });
 
-    const hugeFileThreshold = 100 * 1024 * 1024; // 100 MB
-    const hugeFiles = sessionLogFiles.filter((f) => f.sizeBytes > hugeFileThreshold);
+    const hugeFiles = sessionLogFiles.filter((f) => f.sizeBytes > ctx.thresholds.hugeFileBytes);
 
     if (hugeFiles.length > 0) {
       addEvidence(

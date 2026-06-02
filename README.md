@@ -218,6 +218,21 @@ Dashboard is bound to 0.0.0.0, accessible from any network.
 | `--max-log-lines <n>` | Max lines per log file | `500` |
 | `--strict-redaction` | Extra-aggressive redaction | `false` |
 
+### Threshold flags
+
+These flags let you tune the diagnostic sensitivity of `scan` to match your environment. Each flag maps to a check threshold; the defaults are chosen to work for typical Hermes installations.
+
+| Flag | Default | Controls | When to adjust |
+|------|---------|----------|----------------|
+| `--memory-warn-threshold <percent>` | `80` | Memory usage warning threshold (percentage of total available) | Raise this (e.g. to `90`) if you routinely see false-positive warnings on memory-constrained systems |
+| `--memory-critical-threshold <percent>` | `100` | Memory usage critical threshold (percentage of total available) | Raise this (e.g. to `120` on systems with swap) if your Hermes process legitimately uses more memory for large context windows |
+| `--huge-file-threshold <mb>` | `100` | File size (MB) above which a memory file triggers a **risk** finding | Increase if your memory files are legitimately large (e.g. long conversations with heavy tool outputs) |
+| `--crash-loop-error-threshold <count>` | `50` | Total error count across log files above which a crash loop is suspected | Raise this if your instance accumulates legitimate errors over a long runtime without restarts |
+| `--crash-loop-recent-threshold <count>` | `20` | Recent error count above which a crash loop is suspected (uses the most recent log segments) | Lower this (e.g. to `10`) for stricter crash-loop detection in CI |
+| `--dashboard-timeout <ms>` | `1500` | Dashboard HTTP probe timeout in milliseconds | Increase (e.g. to `3000` or `5000`) if your dashboard responds slowly or you run on high-latency hardware |
+| `--large-file-threshold <kb>` | `256` | File size (KB) above which a memory file is marked **large** and triggers a warning | Increase if you store legitimately large context files for long-running conversations |
+| `--skills-large-file-threshold <kb>` | `512` | File size (KB) above which a SKILL.md file is flagged as **large** | Increase if your skill documentation files are legitimately extensive (e.g. detailed reference skills) |
+
 ### Export options
 
 | Option | Description | Default |

@@ -16,7 +16,6 @@ import type { SkillsData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
 
 const EMPTY: SkillsData = {};
-const LARGE_FILE_BYTES = 512 * 1024;
 
 type SkillEntry = NonNullable<SkillsData["skills"]>[number];
 type BrokenRef = NonNullable<SkillsData["brokenRefs"]>[number];
@@ -131,7 +130,7 @@ export async function collectSkills(
     for (const rel of matches) {
       const abs = path.join(skillsDir, rel);
       const stat = await statSafe(abs);
-      if (stat && stat.size > LARGE_FILE_BYTES) {
+      if (stat && stat.size > ctx.thresholds.skillsLargeFileBytes) {
         largeFiles.push({ path: abs, sizeBytes: stat.size });
       }
     }

@@ -9,6 +9,7 @@ import {
   buildSnapshot,
   DeterministicWorkflowRunner,
   type WorkflowRunner,
+  type Thresholds,
 } from "@hermes-doctor/core";
 
 import { renderConsole } from "../output/console-renderer.js";
@@ -27,6 +28,14 @@ interface ScanOptions {
   includeLogSnippets?: boolean;
   maxLogLines?: string;
   strictRedaction?: boolean;
+  memoryWarnThreshold?: string;
+  memoryCriticalThreshold?: string;
+  hugeFileThreshold?: string;
+  crashLoopErrorThreshold?: string;
+  crashLoopRecentThreshold?: string;
+  dashboardTimeout?: string;
+  largeFileThreshold?: string;
+  skillsLargeFileThreshold?: string;
 }
 
 export interface ResolvedHermesHome {
@@ -38,20 +47,21 @@ export interface ResolvedHermesHome {
 function resolveHermesHome(cliPath?: string): ResolvedHermesHome {
   const target = cliPath ?? process.env.HERMES_HOME ?? path.join(os.homedir(), ".hermes");
   const resolved = path.resolve(target);
-  let exists = false;
-  let readable = false;
+  let exists = false
+  let readable = false
   try {
-    fs.accessSync(resolved, fs.constants.F_OK);
-    exists = true;
-    try {
-      fs.accessSync(resolved, fs.constants.R_OK);
-      readable = true;
-    } catch {
-      readable = false;
-    }
+    fs.accessSync(resolved, fs.constants.F_OK)
+    exists = true
   } catch {
-    exists = false;
-    readable = false;
+    // exists and readable stay false
+  }
+  if (exists) {
+    try {
+      fs.accessSync(resolved, fs.constants.R_OK)
+      readable = true
+    } catch {
+      // readable stays false
+    }
   }
   return { path: resolved, exists, readable };
 }
@@ -155,6 +165,38 @@ export function registerScanCommand(program: Command): void {
       "Enable extra-aggressive redaction patterns (base64, env values, etc.)",
       false,
     )
+    .option(
+      "--memory-warn-threshold <percent>",
+      "Memory usage warning threshold as a percentage of total available. Raise this to reduce false-positive warnings on memory-constrained systems. (default: 80)",
+    )
+    .option(
+      "--memory-critical-threshold <percent>",
+      "Memory usage critical threshold as a percentage of total available. Raise this if your Hermes process legitimately uses more memory for large context windows. (default: 100)",
+    )
+    .option(
+      "--huge-file-threshold <mb>",
+      "File size in MB above which a memory file is considered 'huge' and triggers a risk finding. Increase if your memory files legitimately exceed 100 MB (e.g. when using large tool outputs or conversation histories). (default: 100)",
+    )
+    .option(
+      "--crash-loop-error-threshold <count>",
+      "Total error count across log files above which a crash loop is suspected. Raise this if your Hermes instance legitimately accumulates many errors over a long runtime. (default: 50)",
+    )
+    .option(
+      "--crash-loop-recent-threshold <count>",
+      "Recent error count above which a crash loop is suspected (uses the most recent log segments). Lower this for stricter crash-loop detection in CI. (default: 20)",
+    )
+    .option(
+      "--dashboard-timeout <ms>",
+      "Dashboard HTTP probe timeout in milliseconds. Increase if your Hermes dashboard is slow to respond or you are running on high-latency hardware. (default: 1500)",
+    )
+    .option(
+      "--large-file-threshold <kb>",
+      "File size in KB above which a memory file is marked 'large' and triggers a warning. Increase this threshold if you store legitimately large context files for long-running conversations. (default: 256)",
+    )
+    .option(
+      "--skills-large-file-threshold <kb>",
+      "File size in KB above which a SKILL.md file is flagged as large. Increase if your skill documentation is legitimately extensive (e.g. detailed reference skills). (default: 512)",
+    )
     .action(async (options: ScanOptions) => {
       try {
         await executeScan(options);
@@ -172,6 +214,47 @@ export function registerScanCommand(program: Command): void {
  */
 function collectFormats(value: string, previous: string[]): string[] {
   return previous.concat([value]);
+}
+
+/**
+ * Parse CLI threshold options into a Thresholds object.
+ * Returns undefined if no thresholds were explicitly set,
+ * so the core's defaults apply downstream.
+ */
+function parseThresholds(options: ScanOptions): Partial<Thresholds> | undefined {
+  const partial: Partial<Thresholds> = {};
+  let hasAny = false;
+
+  if (options.memoryWarnThreshold !== undefined) {
+    partial.memoryWarnPercent = parseInt(options.memoryWarnThreshold, 10);
+    hasAny = true;
+  }
+  if (options.memoryCriticalThreshold !== undefined) {
+    partial.memoryCriticalPercent = parseInt(options.memoryCriticalThreshold, 10);
+    hasAny = true;
+  }
+  if (options.hugeFileThreshold !== undefined) {
+    partial.hugeFileBytes = parseInt(options.hugeFileThreshold, 10) * 1024 * 1024;
+    hasAny = true;
+  }
+  if (options.crashLoopErrorThreshold !== undefined) {
+    partial.crashLoopErrorCount = parseInt(options.crashLoopErrorThreshold, 10);
+    hasAny = true;
+  }
+  if (options.crashLoopRecentThreshold !== undefined) {
+    partial.crashLoopRecentErrors = parseInt(options.crashLoopRecentThreshold, 10);
+    hasAny = true;
+  }
+  if (options.largeFileThreshold !== undefined) {
+    partial.largeFileBytes = parseInt(options.largeFileThreshold, 10) * 1024;
+    hasAny = true;
+  }
+  if (options.skillsLargeFileThreshold !== undefined) {
+    partial.skillsLargeFileBytes = parseInt(options.skillsLargeFileThreshold, 10) * 1024;
+    hasAny = true;
+  }
+
+  return hasAny ? partial : undefined;
 }
 
 async function executeScan(options: ScanOptions): Promise<void> {
@@ -208,6 +291,14 @@ async function executeScan(options: ScanOptions): Promise<void> {
     ? parseInt(options.maxLogLines, 10)
     : 500;
 
+  // Parse diagnostic thresholds from CLI flags
+  const thresholds = parseThresholds(options);
+
+  // Parse --dashboard-timeout
+  const dashboardTimeoutMs = options.dashboardTimeout
+    ? parseInt(options.dashboardTimeout, 10)
+    : undefined;
+
   // Step 1: Run all collectors with all options
   const collectorResults = await collectAll({
     hermesHome: hermesHome.path,
@@ -215,12 +306,15 @@ async function executeScan(options: ScanOptions): Promise<void> {
     includeLogSnippets: options.includeLogSnippets ?? false,
     maxLogLines: isNaN(maxLogLines) ? 500 : maxLogLines,
     strictRedaction: options.strictRedaction ?? false,
+    thresholds,
+    dashboardTimeoutMs,
   });
 
   // Step 2: Build snapshot
   const snapshot = buildSnapshot(collectorResults, {
     profile,
     hermesHome: hermesHome.path,
+    thresholds,
   });
 
   // Step 3: Create the appropriate runner and execute

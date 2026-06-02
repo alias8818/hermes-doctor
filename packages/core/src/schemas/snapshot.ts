@@ -309,6 +309,17 @@ export const SecuritySnapshotSchema = v.object({
 });
 export type SecuritySnapshot = v.InferOutput<typeof SecuritySnapshotSchema>;
 
+export const ThresholdsSchema = v.object({
+  memoryWarnPercent: v.optional(v.number(), 80),
+  memoryCriticalPercent: v.optional(v.number(), 100),
+  hugeFileBytes: v.optional(v.number(), 100 * 1024 * 1024),
+  crashLoopErrorCount: v.optional(v.number(), 50),
+  crashLoopRecentErrors: v.optional(v.number(), 20),
+  largeFileBytes: v.optional(v.number(), 256 * 1024),
+  skillsLargeFileBytes: v.optional(v.number(), 512 * 1024),
+});
+export type ThresholdsSnapshot = v.InferOutput<typeof ThresholdsSchema>;
+
 export const RedactionSummarySchema = v.object({
   redacted: v.boolean(),
   count: v.number(),
@@ -336,5 +347,6 @@ export const HermesSnapshotSchema = v.object({
   security: SecuritySnapshotSchema,
   collectionWarnings: v.array(v.string()),
   redaction: RedactionSummarySchema,
+  thresholds: v.optional(ThresholdsSchema),
 });
 export type HermesSnapshot = v.InferOutput<typeof HermesSnapshotSchema>;

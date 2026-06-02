@@ -1,6 +1,8 @@
 packages:
   - "packages/*"
 
+trustLockfile: true
+
 allowBuilds:
   '@google/genai': true
   '@mongodb-js/zstd': true

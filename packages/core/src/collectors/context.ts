@@ -1,3 +1,4 @@
+import { mergeThresholds, type Thresholds } from "../checks/thresholds.js";
 import type { RedactionOptions } from "../redaction/index.js";
 import {
   hermesPaths,
@@ -15,6 +16,7 @@ export interface CollectorContext {
   redaction: RedactionOptions;
   commandTimeoutMs: number;
   dashboardTimeoutMs: number;
+  thresholds: Thresholds;
   now: () => Date;
   includeLogSnippets: boolean;
   maxLogLines: number;
@@ -28,6 +30,7 @@ export interface CreateCollectorContextOptions {
   redaction?: RedactionOptions;
   commandTimeoutMs?: number;
   dashboardTimeoutMs?: number;
+  thresholds?: Partial<Thresholds>;
   now?: () => Date;
   includeLogSnippets?: boolean;
   maxLogLines?: number;
@@ -50,6 +53,7 @@ export function createCollectorContext(
     commandTimeoutMs: options.commandTimeoutMs ?? 10_000,
     dashboardTimeoutMs:
       options.dashboardTimeoutMs ?? DEFAULT_DASHBOARD_TIMEOUT_MS,
+    thresholds: mergeThresholds(options.thresholds),
     now: options.now ?? (() => new Date()),
     includeLogSnippets: options.includeLogSnippets ?? false,
     maxLogLines: options.maxLogLines ?? 500,

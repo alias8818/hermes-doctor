@@ -87,6 +87,14 @@ Reports are **redacted for sharing** — secrets are replaced with `[REDACTED:TY
 | `--strict-redaction` | Aggressive redaction (base64, secret-like env values) |
 | `--flue` | Optional AI explanations (requires `FLUE_API_KEY` + `@flue/runtime`) |
 | `--no-flue` | Force deterministic output |
+| `--memory-warn-threshold <percent>` | Memory warning % — raise if false positives (default: `80`) |
+| `--memory-critical-threshold <percent>` | Memory critical % — raise if process uses more memory (default: `100`) |
+| `--huge-file-threshold <mb>` | MB threshold for "huge" memory file risk (default: `100`) |
+| `--crash-loop-error-threshold <count>` | Total error count for crash-loop suspicion (default: `50`) |
+| `--crash-loop-recent-threshold <count>` | Recent error count for crash-loop suspicion (default: `20`) |
+| `--dashboard-timeout <ms>` | Dashboard probe timeout (default: `1500`) |
+| `--large-file-threshold <kb>` | KB threshold for "large" memory file warning (default: `256`) |
+| `--skills-large-file-threshold <kb>` | KB threshold for large SKILL.md warning (default: `512`) |
 
 ### Exit codes
 

@@ -189,6 +189,8 @@ export const memoryLimitCheck: Check = {
     const totalSize = mem.totalSizeBytes ?? 0;
     const limit = mem.limitBytes;
     const usagePercent = mem.usagePercent;
+    const criticalPercent = snapshot.thresholds?.memoryCriticalPercent ?? 100;
+    const warnPercent = snapshot.thresholds?.memoryWarnPercent ?? 80;
     const ev: Array<ReturnType<typeof evidence>> = [
       evidence("total_size_bytes", String(totalSize), "file"),
       evidence("limit_bytes", limit !== null && limit !== undefined ? String(limit) : "(not set)", "config"),
@@ -216,7 +218,7 @@ export const memoryLimitCheck: Check = {
       ];
     }
 
-    if (usagePercent !== null && usagePercent !== undefined && usagePercent >= 100) {
+    if (usagePercent !== null && usagePercent !== undefined && usagePercent >= criticalPercent) {
       return [
         finding(
           "memory-limit",
@@ -244,7 +246,7 @@ export const memoryLimitCheck: Check = {
       ];
     }
 
-    if (usagePercent !== null && usagePercent !== undefined && usagePercent >= 80) {
+    if (usagePercent !== null && usagePercent !== undefined && usagePercent >= warnPercent) {
       return [
         finding(
           "memory-limit",
@@ -416,7 +418,8 @@ export const memoryHugeFilesCheck: Check = {
   run(snapshot: HermesSnapshot): ReturnType<Check["run"]> {
     const mem = snapshot.memory;
     const files = mem.files ?? [];
-    const hugeThreshold = 100 * 1024 * 1024; // 100 MB
+    const hugeThreshold = snapshot.thresholds?.hugeFileBytes ?? 100 * 1024 * 1024;
+    const hugeThresholdMB = hugeThreshold / (1024 * 1024);
 
     const hugeFiles = files.filter((f) => f.sizeBytes > hugeThreshold);
     const ev: Array<ReturnType<typeof evidence>> = [
@@ -436,7 +439,7 @@ export const memoryHugeFilesCheck: Check = {
           "ok",
           0,
           "No Huge Memory Files",
-          "No memory files exceed 100 MB",
+          `No memory files exceed ${hugeThresholdMB} MB`,
           ev,
         ),
       ];
@@ -449,7 +452,7 @@ export const memoryHugeFilesCheck: Check = {
         "warning",
           2,
         "Huge Memory Files Detected",
-        `${hugeFiles.length} memory file(s) exceed 100 MB: ${hugeFiles.map((f) => `${f.name} (${formatSize(f.sizeBytes)})`).join(", ")}`,
+        `${hugeFiles.length} memory file(s) exceed ${hugeThresholdMB} MB: ${hugeFiles.map((f) => `${f.name} (${formatSize(f.sizeBytes)})`).join(", ")}`,
         ev,
         hugeFiles.slice(0, 3).map((f) =>
           fix(`Truncate ${f.name}`, {

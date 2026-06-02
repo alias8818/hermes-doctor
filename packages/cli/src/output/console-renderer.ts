@@ -1,4 +1,21 @@
-import pc from "picocolors";
+import picocolors from "picocolors";
+
+// picocolors evaluates FORCE_COLOR/NO_COLOR at import time, so setting these
+// env vars after the module is loaded has no effect. We use a Proxy to
+// re-evaluate color support at each property access (render time), ensuring
+// that runtime changes to FORCE_COLOR / NO_COLOR are respected.
+const pc = new Proxy(picocolors, {
+  get(target, prop: string | symbol) {
+    if (prop === "createColors") return target.createColors;
+    const env = process.env || {};
+    const argv = process.argv || [];
+    const noColor = !!env.NO_COLOR || argv.includes("--no-color");
+    const forceColor = !!env.FORCE_COLOR || argv.includes("--color");
+    const isTTY = !!((process.stdout || {}) as { isTTY?: boolean }).isTTY;
+    const enabled = forceColor || (!noColor && (isTTY || !!env.CI || process.platform === "win32"));
+    return (target.createColors(enabled) as unknown as Record<string, string | ((s: string) => string)>)[prop as string] as (s: string) => string;
+  },
+}) as typeof picocolors;
 
 import type {
   DoctorFinding,
@@ -272,6 +289,7 @@ export function renderConsole(report: DoctorReport, options: ConsoleRenderOption
     } else {
       for (const insight of flueInsights.insights) {
         lines.push(`  ${pc.bold(insight.findingId)}`);
+        // eslint-disable-next-line no-control-regex
         lines.push(`    ${insight.insight.replace(/\u001B\[[0-9;]*[A-Za-z]/g, "")}`);
         lines.push("");
       }

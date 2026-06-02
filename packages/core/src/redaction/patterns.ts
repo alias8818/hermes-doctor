@@ -4,6 +4,7 @@ export type RedactionPatternType =
   | "github_token"
   | "slack_token"
   | "telegram_token"
+  | "api_key"
   | "bearer_token"
   | "auth_header"
   | "ssh_private_key"
@@ -60,7 +61,7 @@ export const REDACTION_PATTERNS: RedactionPattern[] = [
   },
   {
     type: "bearer_token",
-    regex: /(\bBearer\s+)[A-Za-z0-9\-._~+/]+=*/gi,
+    regex: /(\bBearer\s+)[A-Za-z0-9\-._~+/]{20,}=*/gi,
     replacement: "$1[REDACTED:BEARER_TOKEN]",
   },
   {
@@ -75,7 +76,7 @@ export const REDACTION_PATTERNS: RedactionPattern[] = [
   },
   {
     type: "openai_key",
-    regex: /\bsk-(?!ant-)[A-Za-z0-9_-]{8,}/g,
+    regex: /\bsk-(?!ant-)[A-Za-z0-9_-]{40,}/g,
     replacement: "[REDACTED:OPENAI_KEY]",
   },
   {
@@ -90,13 +91,30 @@ export const REDACTION_PATTERNS: RedactionPattern[] = [
   },
   {
     type: "slack_token",
-    regex: /\bxox[baprs]-[A-Za-z0-9-]{8,}/g,
+    regex: /\bxox[baprs]-\d+-[A-Za-z0-9]{8,}/g,
     replacement: "[REDACTED:SLACK_TOKEN]",
   },
   {
     type: "telegram_token",
     regex: /\b\d{6,12}:[A-Za-z0-9_-]{20,}\b/g,
     replacement: "[REDACTED:TELEGRAM_TOKEN]",
+  },
+  /**
+   * Generic API key pattern — catches unknown/custom provider formats.
+   *
+   * Matches keys of the form `prefix_randomstring` where the random part is
+   * at least 20 characters long AND contains a mix of character types
+   * (lowercase + digit/uppercase) to avoid false positives on natural text.
+   *
+   * This catches formats like `myapp_v1_abc123def456ghi789jkl012`,
+   * `custom_provider_key_abcdefghijklmnopqrstuvwxyz012345`, etc. without
+   * needing per-provider entries.
+   */
+  {
+    type: "api_key",
+    regex:
+      /\b[a-z][a-zA-Z0-9]*_(?=[A-Za-z0-9_-]{20,})(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*[A-Z0-9])[A-Za-z0-9_-]+\b/g,
+    replacement: "[REDACTED:API_KEY]",
   },
 ];
 
@@ -112,14 +130,14 @@ export const REDACTION_PATTERNS: RedactionPattern[] = [
 export const STRICT_REDACTION_PATTERNS: RedactionPattern[] = [
   {
     type: "base64_string",
-    regex: /\b(?:[A-Za-z0-9+/]{32,}={0,2})\b/g,
+    regex: /\b(?:[A-Za-z0-9+/]{44,}={0,2})\b/g,
     replacement: "[REDACTED:BASE64_STRING]",
   },
   {
     type: "strict_pattern",
     // Single bounded quantifier + fixed suffixes (no overlapping \w+ / (?:[_-]\w+)* — CodeQL js/redos).
     regex:
-      /(\b[A-Za-z0-9][A-Za-z0-9_-]{0,127}?(?:SECRET|TOKEN|KEY|CREDENTIAL|PASS|SALT)\s*[:=]\s*)([^\s"']{4,})/gi,
+      /(\b[A-Za-z0-9][A-Za-z0-9_-]{0,127}?(?:SECRET|TOKEN|KEY|CREDENTIAL|PASS|SALT|AUTH)[A-Za-z0-9_-]{0,32}\s*[:=]\s*)([^\s"']{4,})/gi,
     replacement: "$1[REDACTED:STRICT]",
   },
 ];

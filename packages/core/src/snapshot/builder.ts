@@ -20,6 +20,7 @@ import type {
   SystemSnapshot,
 } from "../schemas/snapshot.js";
 import { createRedactionSummary } from "../redaction/redact.js";
+import { mergeThresholds, type Thresholds } from "../checks/thresholds.js";
 
 export interface BuildSnapshotOptions {
   /** Hermes profile name (default: "default") */
@@ -28,6 +29,8 @@ export interface BuildSnapshotOptions {
   hermesHome?: string | null;
   /** Timestamp override (default: new Date().toISOString()) */
   collectedAt?: string;
+  /** Diagnostic thresholds overrides (defaults match hardcoded originals) */
+  thresholds?: Partial<Thresholds>;
 }
 
 /**
@@ -58,6 +61,9 @@ export function buildSnapshot(
   const logs = mergeResult<LogsSnapshot>(results.logs);
   const security = mergeResult<SecuritySnapshot>(results.security);
 
+  // Resolve thresholds (user overrides fall back to defaults)
+  const thresholds = mergeThresholds(options.thresholds);
+
   // Aggregate all collection warnings
   const collectionWarnings = collectWarnings(results);
 
@@ -66,6 +72,7 @@ export function buildSnapshot(
     collectedAt,
     profile,
     hermesHome: options.hermesHome ?? null,
+    thresholds,
     system,
     install,
     config,

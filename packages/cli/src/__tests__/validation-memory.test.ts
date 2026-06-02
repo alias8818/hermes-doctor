@@ -67,7 +67,7 @@ beforeAll(() => {
   // (hex-encoded to avoid triggering artifact cleanliness grep)
   const fakeCodebase = resolve(fixturesDir, "fake-secrets", "memory", "codebase.md");
   const openaiKey = Buffer.from(
-    "736b2d746573742d31323334353637383930616263646566",
+    "736b2d746573742d313233343536373839306162636465663132333435363738393061626364656631323334353637383930616263646566",
     "hex",
   ).toString("utf-8");
   const anthropicKey = Buffer.from(

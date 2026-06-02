@@ -186,9 +186,10 @@ describe("VAL-OPT-002: --hermes-home option", () => {
     );
     // The hermesHome field should be present and match the provided path
     expect(report.hermesHome).toBeTruthy();
-    // Either the raw path (if not under home dir) or redacted version
+    // The hermesHome is redacted to <HOME> when under the user's home directory
     expect(
       report.hermesHome === fixturePath ||
+        report.hermesHome === "<HOME>" ||
         (typeof report.hermesHome === "string" && report.hermesHome.includes("hermes-good")),
     ).toBe(true);
   });

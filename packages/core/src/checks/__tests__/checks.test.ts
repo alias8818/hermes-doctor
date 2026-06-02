@@ -31,6 +31,8 @@ import {
   securityChecks,
   skillsChecks,
   systemChecks,
+  mergeThresholds,
+  type Thresholds,
 } from "../index.js";
 
 // ---------------------------------------------------------------------------
@@ -1117,6 +1119,307 @@ describe("memory checks", () => {
     const snap = minimalSnapshot();
     const findings = memoryChecks[3]!.run(snap);
     expect(first(findings).status).toBe("info");
+  });
+
+  it("memory-limit: uses custom warn threshold from snapshot", () => {
+    // With default 80%, usagePercent=75 would be OK
+    // But with custom warnPercent=70, it should warn
+    const snap = minimalSnapshot({
+      memory: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        totalSizeBytes: 3932160,
+        limitBytes: 5242880,
+        usagePercent: 75,
+      },
+      thresholds: {
+        memoryWarnPercent: 70,
+        memoryCriticalPercent: 100,
+        hugeFileBytes: 104857600,
+        crashLoopErrorCount: 50,
+        crashLoopRecentErrors: 20,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = memoryChecks[2]!.run(snap);
+    expect(first(findings).status).toBe("warning");
+    expect(first(findings).severity).toBe(2);
+    expect(first(findings).title).toBe("Memory Near Limit");
+  });
+
+  it("memory-limit: uses custom critical threshold from snapshot", () => {
+    // With default criticalPercent=100, usagePercent=95 would be "near limit"
+    // But with custom criticalPercent=90, it should be "exceeded"
+    const snap = minimalSnapshot({
+      memory: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        totalSizeBytes: 4980736,
+        limitBytes: 5242880,
+        usagePercent: 95,
+      },
+      thresholds: {
+        memoryWarnPercent: 80,
+        memoryCriticalPercent: 90,
+        hugeFileBytes: 104857600,
+        crashLoopErrorCount: 50,
+        crashLoopRecentErrors: 20,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = memoryChecks[2]!.run(snap);
+    expect(first(findings).status).toBe("warning");
+    expect(first(findings).severity).toBe(2);
+    expect(first(findings).title).toBe("Memory Limit Exceeded");
+  });
+
+  it("memory-huge-files: uses custom huge file threshold from snapshot", () => {
+    // Default is 100 MB — a 60 MB file would NOT be detected as huge.
+    // With custom 50 MB threshold, a 60 MB file SHOULD be detected.
+    const snap = minimalSnapshot({
+      memory: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        files: [
+          { name: "big.md", sizeBytes: 60 * 1024 * 1024, large: true },
+        ],
+        totalSizeBytes: 60 * 1024 * 1024,
+      },
+      thresholds: {
+        memoryWarnPercent: 80,
+        memoryCriticalPercent: 100,
+        hugeFileBytes: 50 * 1024 * 1024, // 50 MB
+        crashLoopErrorCount: 50,
+        crashLoopRecentErrors: 20,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = memoryChecks[5]!.run(snap);
+    expect(first(findings).status).toBe("warning");
+    expect(first(findings).severity).toBe(2);
+    expect(first(findings).title).toBe("Huge Memory Files Detected");
+    expect(first(findings).message).toContain("big.md");
+  });
+
+  it("memory-huge-files: respects higher threshold (does not flag below)", () => {
+    // Default is 100 MB — files below that should NOT be flagged.
+    // With custom 200 MB threshold, a 150 MB file should be OK.
+    const snap = minimalSnapshot({
+      memory: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        files: [
+          { name: "big.md", sizeBytes: 150 * 1024 * 1024, large: true },
+        ],
+        totalSizeBytes: 150 * 1024 * 1024,
+      },
+      thresholds: {
+        memoryWarnPercent: 80,
+        memoryCriticalPercent: 100,
+        hugeFileBytes: 200 * 1024 * 1024, // 200 MB
+        crashLoopErrorCount: 50,
+        crashLoopRecentErrors: 20,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = memoryChecks[5]!.run(snap);
+    expect(first(findings).status).toBe("ok");
+    expect(first(findings).title).toBe("No Huge Memory Files");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Threshold configurability
+// ---------------------------------------------------------------------------
+describe("threshold configurability (VAL-THRESHOLD)", () => {
+  it("mergeThresholds returns defaults when given undefined", () => {
+    const result = mergeThresholds(undefined);
+    expect(result.memoryWarnPercent).toBe(80);
+    expect(result.memoryCriticalPercent).toBe(100);
+    expect(result.hugeFileBytes).toBe(100 * 1024 * 1024);
+    expect(result.crashLoopErrorCount).toBe(50);
+    expect(result.crashLoopRecentErrors).toBe(20);
+    expect(result.largeFileBytes).toBe(256 * 1024);
+    expect(result.skillsLargeFileBytes).toBe(512 * 1024);
+  });
+
+  it("mergeThresholds returns defaults when given null", () => {
+    const result = mergeThresholds(null);
+    expect(result.memoryWarnPercent).toBe(80);
+  });
+
+  it("mergeThresholds overrides specified fields, keeps defaults for rest", () => {
+    const result = mergeThresholds({ memoryWarnPercent: 90 });
+    expect(result.memoryWarnPercent).toBe(90);
+    expect(result.memoryCriticalPercent).toBe(100); // default
+    expect(result.hugeFileBytes).toBe(100 * 1024 * 1024); // default
+  });
+
+  it("mergeThresholds overrides all fields", () => {
+    const custom: Thresholds = {
+      memoryWarnPercent: 50,
+      memoryCriticalPercent: 90,
+      hugeFileBytes: 50 * 1024 * 1024,
+      crashLoopErrorCount: 10,
+      crashLoopRecentErrors: 5,
+      largeFileBytes: 1024 * 1024,
+      skillsLargeFileBytes: 2 * 1024 * 1024,
+    };
+    const result = mergeThresholds(custom);
+    expect(result).toEqual(custom);
+  });
+
+  it("logs-recent-errors: uses custom crash loop error threshold", () => {
+    // Default crashLoopErrorCount is 50 — with 40 errors it would NOT be a crash loop.
+    // With custom threshold of 30, 40 errors SHOULD flag as crash loop.
+    const snap = minimalSnapshot({
+      logs: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        logFile: "/home/.hermes/logs/hermes.log",
+        errorCount: 40,
+        recentErrors: [
+          { timestamp: "2026-06-01T10:00:00Z", message: "error 1" },
+          { timestamp: "2026-06-01T10:01:00Z", message: "error 2" },
+        ],
+      },
+      thresholds: {
+        memoryWarnPercent: 80,
+        memoryCriticalPercent: 100,
+        hugeFileBytes: 104857600,
+        crashLoopErrorCount: 30,
+        crashLoopRecentErrors: 20,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = logsChecks[0]!.run(snap);
+    expect(first(findings).status).toBe("broken");
+    expect(first(findings).severity).toBe(3);
+    expect(first(findings).title).toBe("High Error Rate Detected");
+  });
+
+  it("logs-recent-errors: uses custom crash loop recent threshold", () => {
+    // Default crashLoopRecentErrors is 20 — with 10 recent errors it would NOT be crash loop.
+    // With custom threshold of 5, 10 recent errors SHOULD flag as crash loop.
+    const snap = minimalSnapshot({
+      logs: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        logFile: "/home/.hermes/logs/hermes.log",
+        errorCount: 10,
+        recentErrors: Array.from({ length: 10 }, (_, i) => ({
+          timestamp: `2026-06-01T10:0${i}:00Z`,
+          message: `error ${i + 1}`,
+        })),
+      },
+      thresholds: {
+        memoryWarnPercent: 80,
+        memoryCriticalPercent: 100,
+        hugeFileBytes: 104857600,
+        crashLoopErrorCount: 50,
+        crashLoopRecentErrors: 5,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = logsChecks[0]!.run(snap);
+    expect(first(findings).status).toBe("broken");
+    expect(first(findings).severity).toBe(3);
+  });
+
+  it("logs-recent-errors: respects higher crash loop threshold (no false alarm)", () => {
+    // With custom crashLoopErrorCount=100 and crashLoopRecentErrors=30,
+    // 60 errors with 2 recent should NOT be a crash loop.
+    const snap = minimalSnapshot({
+      logs: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        logFile: "/home/.hermes/logs/hermes.log",
+        errorCount: 60,
+        recentErrors: [
+          { timestamp: "2026-06-01T10:00:00Z", message: "error" },
+        ],
+      },
+      thresholds: {
+        memoryWarnPercent: 80,
+        memoryCriticalPercent: 100,
+        hugeFileBytes: 104857600,
+        crashLoopErrorCount: 100,
+        crashLoopRecentErrors: 30,
+        largeFileBytes: 262144,
+        skillsLargeFileBytes: 524288,
+      },
+    });
+    const findings = logsChecks[0]!.run(snap);
+    expect(first(findings).status).toBe("warning");
+    expect(first(findings).severity).toBe(1);
+    expect(first(findings).title).toBe("Recent Errors Found");
+  });
+
+  it("snapshot without thresholds uses defaults (backward compatible)", () => {
+    // A snapshot without thresholds should use the standard defaults.
+    const snap = minimalSnapshot({
+      memory: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        totalSizeBytes: 4194304,
+        limitBytes: 5242880,
+        usagePercent: 80,
+      },
+    });
+    // Should warn at 80% (default)
+    const findings = memoryChecks[2]!.run(snap);
+    expect(first(findings).status).toBe("warning");
+    expect(first(findings).title).toBe("Memory Near Limit");
+  });
+
+  it("CLI parsing: huge-file-threshold 50 maps to 50 MB in bytes", () => {
+    // Simulate what parseThresholds in scan.ts does
+    const mb = "50";
+    const bytes = parseInt(mb, 10) * 1024 * 1024;
+    const thresholds = mergeThresholds({ hugeFileBytes: bytes });
+    expect(thresholds.hugeFileBytes).toBe(50 * 1024 * 1024);
+  });
+
+  it("CLI parsing: large-file-threshold 512 maps to 512 KB in bytes", () => {
+    // Simulate what parseThresholds in scan.ts does
+    const kb = "512";
+    const bytes = parseInt(kb, 10) * 1024;
+    const thresholds = mergeThresholds({ largeFileBytes: bytes });
+    expect(thresholds.largeFileBytes).toBe(512 * 1024);
+  });
+
+  it("mergeThresholds round-trips all fields correctly", () => {
+    const input: Thresholds = {
+      memoryWarnPercent: 75,
+      memoryCriticalPercent: 95,
+      hugeFileBytes: 209715200,
+      crashLoopErrorCount: 30,
+      crashLoopRecentErrors: 10,
+      largeFileBytes: 524288,
+      skillsLargeFileBytes: 1048576,
+    };
+    const merged = mergeThresholds(input);
+    expect(merged.memoryWarnPercent).toBe(75);
+    expect(merged.memoryCriticalPercent).toBe(95);
+    expect(merged.hugeFileBytes).toBe(209715200);
+    expect(merged.crashLoopErrorCount).toBe(30);
+    expect(merged.crashLoopRecentErrors).toBe(10);
+    expect(merged.largeFileBytes).toBe(524288);
+    expect(merged.skillsLargeFileBytes).toBe(1048576);
   });
 });
 

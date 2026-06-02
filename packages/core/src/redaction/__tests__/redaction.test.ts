@@ -13,17 +13,17 @@ import {
 
 describe("redact() — API keys", () => {
   it("redacts OpenAI keys", () => {
-    const { value, summary } = redact("key=sk-1234567890abcdefghij");
-    expect(value).not.toContain("sk-1234567890abcdefghij");
+    const { value, summary } = redact("key=sk-1234567890abcdef1234567890abcdef1234567890abcdef");
+    expect(value).not.toContain("sk-1234567890abcdef1234567890abcdef1234567890abcdef");
     expect(value).toContain("[REDACTED:OPENAI_KEY]");
     expect(summary.patterns).toContain("openai_key");
     expect(summary.totalRedactions).toBeGreaterThan(0);
   });
 
   it("redacts modern sk-proj OpenAI keys", () => {
-    const { value } = redact("OPENAI_API_KEY=sk-proj-abcDEF1234567890ghiJKL");
+    const { value } = redact("OPENAI_API_KEY=sk-proj-abcDEF1234567890ghiJKLmnopqrstuvwxyzABCDEFGHIJK");
     expect(value).toContain("[REDACTED:OPENAI_KEY]");
-    expect(value).not.toContain("sk-proj-abcDEF1234567890ghiJKL");
+    expect(value).not.toContain("sk-proj-abcDEF1234567890ghiJKLmnopqrstuvwxyzABCDEFGHIJK");
   });
 
   it("redacts Anthropic keys without mislabeling them as OpenAI", () => {
@@ -48,9 +48,9 @@ describe("redact() — API keys", () => {
   });
 
   it("redacts Slack tokens", () => {
-    const { value, summary } = redact("SLACK_TOKEN=xoxb-1234567890-ABCDEFGHIJ");
+    const { value, summary } = redact("SLACK_TOKEN=xoxb-1234567890-ABCDEFGHIJ01234567");
     expect(value).toContain("[REDACTED:SLACK_TOKEN]");
-    expect(value).not.toContain("xoxb-1234567890-ABCDEFGHIJ");
+    expect(value).not.toContain("xoxb-1234567890-ABCDEFGHIJ01234567");
     expect(summary.patterns).toContain("slack_token");
   });
 
@@ -61,6 +61,34 @@ describe("redact() — API keys", () => {
     expect(value).toContain("[REDACTED:TELEGRAM_TOKEN]");
     expect(value).not.toContain("AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw");
     expect(summary.patterns).toContain("telegram_token");
+  });
+
+  it("redacts unknown/custom API keys with multi-segment prefix", () => {
+    const { value, summary } = redact("CUSTOM_API_KEY=myapp_v1_abc123def456ghi789jkl012");
+    expect(value).toContain("[REDACTED:API_KEY]");
+    expect(value).not.toContain("myapp_v1_abc123def456ghi789jkl012");
+    expect(summary.patterns).toContain("api_key");
+  });
+
+  it("redacts unknown API keys with single-segment prefix", () => {
+    const { value, summary } = redact("CUSTOM_API_KEY=myapp_abc123def456ghi789jkl012mnop");
+    expect(value).toContain("[REDACTED:API_KEY]");
+    expect(value).not.toContain("myapp_abc123def456ghi789jkl012mnop");
+    expect(summary.patterns).toContain("api_key");
+  });
+
+  it("redacts unknown API keys inside config values", () => {
+    const { value, summary } = redact(
+      "provider:\n  api_key: custom_provider_v2_abcdefghijklmnopqrstuvwxyz012345",
+    );
+    expect(value).toContain("[REDACTED:API_KEY]");
+    expect(value).not.toContain("custom_provider_v2_abcdefghijklmnopqrstuvwxyz012345");
+    expect(summary.patterns).toContain("api_key");
+  });
+
+  it("does NOT redact short underscore-separated words as API keys", () => {
+    const { value } = redact("this_is_a_normal_config_value");
+    expect(value).not.toContain("[REDACTED:API_KEY]");
   });
 });
 
@@ -221,13 +249,13 @@ describe("redact() — home paths", () => {
 
 describe("redact() — summary semantics", () => {
   it("returns a schema-valid RedactionSummary", () => {
-    const { summary } = redact("sk-1234567890abcdefghij");
+    const { summary } = redact("sk-1234567890abcdef1234567890abcdef1234567890abcdef");
     expect(() => v.parse(RedactionSummarySchema, summary)).not.toThrow();
   });
 
   it("counts multiple secrets and dedupes pattern types", () => {
     const { summary } = redact(
-      "a=sk-1234567890abcdefghij b=sk-abcdefghij0987654321 t=ghp_abcdefghijklmnopqrstuvwxyz0123456789",
+      "a=sk-1234567890abcdef1234567890abcdef1234567890abcdef b=sk-abcdefghij0987654321abcdefghij0987654321abcdefghij t=ghp_abcdefghijklmnopqrstuvwxyz0123456789",
     );
     expect(summary.totalRedactions).toBe(3);
     expect(summary.count).toBe(summary.totalRedactions);
@@ -237,11 +265,11 @@ describe("redact() — summary semantics", () => {
 
   it("marks redacted=true only when something was redacted", () => {
     expect(redact("nothing secret here").summary.redacted).toBe(false);
-    expect(redact("sk-1234567890abcdefghij").summary.redacted).toBe(true);
+    expect(redact("sk-1234567890abcdef1234567890abcdef1234567890abcdef").summary.redacted).toBe(true);
   });
 
   it("keeps secret count separate from home path count", () => {
-    const { summary } = redact("/home/someuser/key sk-1234567890abcdefghij");
+    const { summary } = redact("/home/someuser/key sk-1234567890abcdef1234567890abcdef1234567890abcdef");
     expect(summary.totalRedactions).toBe(1);
     expect(summary.homePathRedactions).toBe(1);
     expect(summary.patterns).not.toContain("home_path");
@@ -251,7 +279,7 @@ describe("redact() — summary semantics", () => {
 describe("redactDeep()", () => {
   it("recursively redacts strings in nested structures", () => {
     const input = {
-      env: { OPENAI_API_KEY: "sk-1234567890abcdefghij" },
+      env: { OPENAI_API_KEY: "sk-1234567890abcdef1234567890abcdef1234567890abcdef" },
       paths: ["/home/someuser/.hermes", "relative/ok"],
       count: 7,
       ok: true,
@@ -288,13 +316,81 @@ describe("summary helpers", () => {
   });
 
   it("mergeRedactionSummaries combines counts and dedupes patterns", () => {
-    const a = redact("sk-1234567890abcdefghij /home/someuser/x").summary;
+    const a = redact("sk-1234567890abcdef1234567890abcdef1234567890abcdef /home/someuser/x").summary;
     const b = redact("ghp_abcdefghijklmnopqrstuvwxyz0123456789").summary;
     const merged = mergeRedactionSummaries(a, b);
     expect(merged.totalRedactions).toBe(2);
     expect(merged.homePathRedactions).toBe(1);
     expect(merged.patterns.sort()).toEqual(["github_token", "openai_key"]);
     expect(merged.redacted).toBe(true);
+  });
+});
+
+describe("false-positive prevention — tight patterns do NOT match non-secret config values", () => {
+  it("does NOT redact short sk- prefixed config values as OpenAI keys", () => {
+    const { value, summary } = redact("config-value=sk-some-config-value");
+    expect(value).not.toContain("[REDACTED:OPENAI_KEY]");
+    expect(summary.patterns).not.toContain("openai_key");
+  });
+
+  it("does NOT redact sk- values shorter than real keys", () => {
+    const { value, summary } = redact("sk-abc");
+    expect(value).not.toContain("[REDACTED:OPENAI_KEY]");
+    expect(summary.patterns).not.toContain("openai_key");
+  });
+
+  it("does NOT redact xoxo- prefixed config values as Slack tokens", () => {
+    const { value, summary } = redact("xoxo-config-value");
+    expect(value).not.toContain("[REDACTED:SLACK_TOKEN]");
+    expect(summary.patterns).not.toContain("slack_token");
+  });
+
+  it("does NOT redact xoxb- values without numeric token segments", () => {
+    const { value, summary } = redact("some-setting=xoxb-config-value");
+    expect(value).not.toContain("[REDACTED:SLACK_TOKEN]");
+    expect(summary.patterns).not.toContain("slack_token");
+  });
+
+  it("does NOT redact a Bearer token value that is too short", () => {
+    const { value, summary } = redact("Authorization: Bearer short");
+    expect(value).not.toContain("[REDACTED:BEARER_TOKEN]");
+    expect(summary.patterns).not.toContain("bearer_token");
+  });
+
+  it("does NOT redact Bearer with a short alphanumeric value", () => {
+    const { value, summary } = redact("Bearer abc123def456");
+    expect(value).not.toContain("[REDACTED:BEARER_TOKEN]");
+    expect(summary.patterns).not.toContain("bearer_token");
+  });
+
+  it("does NOT redact medium-length base64 strings in strict mode", () => {
+    // 36 chars of base64 (27 bytes) — below the 44-char threshold
+    const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij";
+    const { value, summary } = redact(b64, { strictRedaction: true });
+    expect(value).toBe(b64);
+    expect(summary.patterns).not.toContain("base64_string");
+  });
+
+  it("does NOT redact 43-char base64 strings in strict mode (just below threshold)", () => {
+    // 43 chars — below 44-char threshold
+    const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq";
+    const { value, summary } = redact(b64, { strictRedaction: true });
+    expect(value).toBe(b64);
+    expect(summary.patterns).not.toContain("base64_string");
+  });
+
+  it("DOES redact 44-char base64 strings in strict mode (at threshold)", () => {
+    // 44 chars — at threshold, should be redacted
+    const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr";
+    const { value, summary } = redact(b64, { strictRedaction: true });
+    expect(value).toContain("[REDACTED:BASE64_STRING]");
+    expect(summary.patterns).toContain("base64_string");
+  });
+
+  it("does NOT redact plain env var values that look like base64 but are short in strict mode", () => {
+    const { value, summary } = redact("some.config=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij", { strictRedaction: true });
+    expect(value).not.toContain("[REDACTED:BASE64_STRING]");
+    expect(summary.patterns).not.toContain("base64_string");
   });
 });
 
@@ -321,5 +417,32 @@ describe("strict redaction", () => {
   it("does not apply strict patterns without strictRedaction", () => {
     const { value } = redact("MY_APP_SECRET=supersecretvalue");
     expect(value).toContain("supersecretvalue");
+  });
+
+  it("redacts AUTH-suffixed env vars in strict mode", () => {
+    const { value, summary } = redact("MYAPP_AUTH=supersecretvalue123", {
+      strictRedaction: true,
+    });
+    expect(value).toContain("MYAPP_AUTH=[REDACTED:STRICT]");
+    expect(value).not.toContain("supersecretvalue123");
+    expect(summary.patterns).toContain("strict_pattern");
+  });
+
+  it("redacts env vars with keyword followed by version suffix in strict mode", () => {
+    const { value, summary } = redact("PROVIDER_TOKEN_V1=supersecretvalue", {
+      strictRedaction: true,
+    });
+    expect(value).toContain("PROVIDER_TOKEN_V1=[REDACTED:STRICT]");
+    expect(value).not.toContain("supersecretvalue");
+    expect(summary.patterns).toContain("strict_pattern");
+  });
+
+  it("redacts env vars with AUTH followed by version suffix in strict mode", () => {
+    const { value, summary } = redact("PROVIDER_AUTH_V2=supersecretvalue", {
+      strictRedaction: true,
+    });
+    expect(value).toContain("PROVIDER_AUTH_V2=[REDACTED:STRICT]");
+    expect(value).not.toContain("supersecretvalue");
+    expect(summary.patterns).toContain("strict_pattern");
   });
 });

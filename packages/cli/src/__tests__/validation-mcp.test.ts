@@ -87,7 +87,8 @@ function scoreFixGuidance(finding: Finding): number {
 }
 
 // Construct fake secret token from byte array (avoids raw strings in source)
-const SK_TOKEN = Buffer.from(new Uint8Array([0x73,0x6b,0x2d,0x74,0x65,0x73,0x74,0x2d,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x30,0x61,0x62,0x63,0x64,0x65,0x66])).toString("utf-8");
+const SK_TOKEN_LONG = "sk-test-1234567890abcdef1234567890abcdef12345678";
+const SK_TOKEN = SK_TOKEN_LONG;
 
 function collectFileHashes(dir: string): Record<string, string> {
   const hashes: Record<string, string> = {};
@@ -461,7 +462,7 @@ describe("VAL-MCP: MCP Failures", () => {
 
     function createTempFixture(): string {
       const tmpDir = mkdtempSync(join(os.tmpdir(), "mcp-sr-"));
-      const skBytes2 = new Uint8Array([0x73,0x6b,0x2d,0x74,0x65,0x73,0x74,0x2d,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x30,0x61,0x62,0x63,0x64,0x65,0x66]);
+      const skBytes2 = new Uint8Array([115,107,45,116,101,115,116,45,49,50,51,52,53,54,55,56,57,48,97,98,99,100,101,102,49,50,51,52,53,54,55,56,57,48,97,98,99,100,101,102,49,50,51,52,53,54,55,56]);
       const hexT = Buffer.from(skBytes2).toString("hex");
       const secretToken = Buffer.from(hexT, "hex").toString("utf-8");
       writeFileSync(

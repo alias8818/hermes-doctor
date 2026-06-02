@@ -14,6 +14,7 @@ import { systemChecks } from "./system.js";
 
 export { finding, fix, evidence } from "./types.js";
 export type { Check } from "./types.js";
+export { mergeThresholds, type Thresholds } from "./thresholds.js";
 export * from "./system.js";
 export * from "./install.js";
 export * from "./config.js";

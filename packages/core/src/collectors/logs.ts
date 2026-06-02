@@ -16,16 +16,36 @@ const ERROR_LINE = /\b(error|exception|fatal|failed|failure|panic)\b/i;
 const TIMESTAMP =
   /(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/;
 
+// HTTP status codes only count as auth/rate-limit errors in HTTP response context
+const HTTP_STATUS_KEYWORDS =
+  /\b(?:status|code|http|response|returned|got|received)\b[:\s=]*/i;
+
 const CLASSIFIERS: Array<{ type: ErrorType; pattern: RegExp }> = [
-  { type: "auth", pattern: /unauthor|invalid (?:api )?key|authenticat|forbidden|\b401\b|\b403\b/i },
-  { type: "rate_limit", pattern: /rate.?limit|too many requests|\b429\b|quota/i },
+  {
+    type: "auth",
+    pattern: /\bunauthor|\binvalid (?:api )?key\b|\bauthenticat|\bforbidden|not authorized/i,
+  },
+  { type: "rate_limit", pattern: /rate.?limit|too many requests|\bquota\b/i },
   { type: "mcp", pattern: /\bmcp\b|tool server|stdio server|server-[a-z]/i },
   { type: "permission", pattern: /permission|eacces|access denied|read-?only|operation not permitted/i },
   { type: "network", pattern: /econnrefused|etimedout|enotfound|network|fetch failed|socket|dns/i },
   { type: "model", pattern: /\bmodel\b|completion|context (?:length|window)|token limit|max tokens/i },
 ];
 
-function classify(line: string): ErrorType {
+// Extra pass for HTTP status codes: 401/403/429 only count when preceded by HTTP context
+const HTTP_AUTH_PATTERN = new RegExp(
+  HTTP_STATUS_KEYWORDS.source + "(401|403)\\b",
+  "i",
+);
+const HTTP_RATELIMIT_PATTERN = new RegExp(
+  HTTP_STATUS_KEYWORDS.source + "429\\b",
+  "i",
+);
+
+export function classify(line: string): ErrorType {
+  // Check HTTP status code patterns first (require context)
+  if (HTTP_AUTH_PATTERN.test(line)) return "auth";
+  if (HTTP_RATELIMIT_PATTERN.test(line)) return "rate_limit";
   for (const { type, pattern } of CLASSIFIERS) {
     if (pattern.test(line)) return type;
   }
