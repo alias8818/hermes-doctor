@@ -21,7 +21,7 @@ mcp_servers:
       - HOME
 
 dashboard:
-  url: http://127.0.0.1:8080
+  url: http://127.0.0.1:47999
   bind: 127.0.0.1
   auth: true
   tls: false

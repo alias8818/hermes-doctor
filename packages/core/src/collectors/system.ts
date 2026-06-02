@@ -1,6 +1,8 @@
 import type { CollectorResult } from "../schemas/collector.js";
 import { runCommand } from "../utils/exec.js";
 import { getPlatformInfo } from "../utils/platform.js";
+import { envForTrustedProbes } from "../utils/trusted-path.js";
+import { findExecutable } from "../utils/which.js";
 import type { CollectorContext } from "./context.js";
 import type { SystemData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
@@ -17,14 +19,15 @@ export async function collectSystem(
     addEvidence(acc, "OS", `${info.os} (${info.arch})`);
     addEvidence(acc, "Node.js", info.nodeVersion);
 
-    const docker = await detectVersion(ctx, "docker");
+    const probeEnv = envForTrustedProbes(ctx.env);
+    const docker = await detectVersion(ctx, "docker", probeEnv);
     if (docker) {
       addEvidence(acc, "Docker", docker);
     } else {
       acc.warnings.push("docker not detected on PATH");
     }
 
-    const git = await detectVersion(ctx, "git");
+    const git = await detectVersion(ctx, "git", probeEnv);
     if (git) {
       addEvidence(acc, "Git", git);
     } else {
@@ -48,11 +51,14 @@ export async function collectSystem(
 async function detectVersion(
   ctx: CollectorContext,
   command: string,
+  probeEnv: NodeJS.ProcessEnv,
 ): Promise<string | null> {
-  const result = await runCommand(command, {
+  const executable = await findExecutable(command, probeEnv);
+  if (!executable) return null;
+  const result = await runCommand(executable, {
     args: ["--version"],
     timeoutMs: ctx.commandTimeoutMs,
-    env: ctx.env,
+    env: probeEnv,
   });
   if (!result.found || result.exitCode !== 0) return null;
   const line = result.stdout.split(/\r?\n/)[0]?.trim();

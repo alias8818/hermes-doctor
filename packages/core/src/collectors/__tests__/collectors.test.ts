@@ -159,12 +159,24 @@ describe("providers collector", () => {
   it("reads provider keys from a .env file in the home", async () => {
     const dir = await home({
       "config.yaml": "providers:\n  openai:\n    api_key_env: OPENAI_API_KEY\n",
-      ".env": "OPENAI_API_KEY=sk-livesecret0000000000\n",
+      ".env": "OPENAI_API_KEY=sk-test-12345678901234567890\n",
     });
     const result = await collectProviders(ctxFor(dir));
     const openai = result.data.providers?.find((p) => p.name === "openai");
     expect(openai?.envSet).toBe(true);
-    expect(JSON.stringify(result)).not.toContain("sk-livesecret0000000000");
+    expect(JSON.stringify(result)).not.toContain("sk-test-12345678901234567890");
+  });
+
+  it("includes model.provider backend when providers.<name> section is absent (v24)", async () => {
+    const dir = await home({
+      "config.yaml":
+        "model:\n  default: gpt-4o\n  provider: openai\nproviders:\n  anthropic:\n    api_key_env: ANTHROPIC_API_KEY\n",
+    });
+    const result = await collectProviders(ctxFor(dir));
+    const openai = result.data.providers?.find((p) => p.name === "openai");
+    expect(openai).toBeDefined();
+    expect(openai?.envSet).toBe(false);
+    expect(result.data.activeProviderBackend).toBe("openai");
   });
 });
 

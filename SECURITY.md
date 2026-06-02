@@ -20,6 +20,10 @@ Hermes Doctor is designed with a **defense-in-depth** approach to data privacy. 
 - **Embedded secrets in unexpected locations**: Secrets embedded in config keys, plugin metadata, or file paths may evade pattern matching.
 - **Flue mode**: When `--flue` is explicitly enabled, report data is sent to a configured LLM provider. Flue is **never** enabled by default.
 
+### Host execution (PATH)
+
+A bare `hermes-doctor` invocation (no subcommand) runs a default scan. System and install collectors resolve `docker`, `git`, and `hermes` using a **restricted PATH** (`/usr/local/bin`, `/usr/bin`, `/bin`, and on macOS `/opt/homebrew/bin`) so a hostile `PATH` in CI or untrusted shells cannot substitute trojan binaries. Run scans only against Hermes homes you trust; remediation commands in reports are quoted but still require operator judgment before copy-paste.
+
 ### Recommendations for Safe Sharing
 
 1. **Always audit reports manually** before sharing externally, especially when sharing Markdown or JSON files that may contain raw diagnostic data.

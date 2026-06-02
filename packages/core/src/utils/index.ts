@@ -4,3 +4,4 @@ export * from "./exec.js";
 export * from "./paths.js";
 export * from "./config.js";
 export * from "./shell-safe.js";
+export * from "./trusted-path.js";

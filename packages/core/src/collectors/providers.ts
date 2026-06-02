@@ -280,6 +280,18 @@ export async function collectProviders(
       });
     }
 
+    // Ensure model.provider (v24) is represented even without providers.<name> section
+    if (activeProviderBackend) {
+      ensureActiveProviderBackendListed({
+        activeProviderBackend,
+        providers,
+        keyChecks,
+        env,
+        parsed: config.parsed,
+        addEvidence: (label, value, source) => addEvidence(acc, label, value, source),
+      });
+    }
+
     // -----------------------------------------------------------------------
     // 5. Parse model→provider references
     //    Sources: custom_providers[].models keys, models top-level array (legacy)
@@ -424,6 +436,93 @@ function countModels(
   if (sectionModels) return sectionModels.length;
 
   return providerCount;
+}
+
+function ensureActiveProviderBackendListed(options: {
+  activeProviderBackend: string;
+  providers: NonNullable<ProviderData["providers"]>;
+  keyChecks: NonNullable<ProviderData["keyChecks"]>;
+  env: NodeJS.ProcessEnv;
+  parsed: Record<string, unknown> | null;
+  addEvidence: (label: string, value: string, source: string) => void;
+}): void {
+  const { activeProviderBackend, providers, keyChecks, env, parsed, addEvidence } =
+    options;
+
+  const alreadyListed = (name: string) => providers.some((p) => p.name === name);
+
+  if (activeProviderBackend.startsWith("custom:")) {
+    if (alreadyListed(activeProviderBackend)) return;
+
+    const customId = activeProviderBackend.slice("custom:".length);
+    let hasCredential = false;
+    const requiredEnv: string[] = [];
+
+    const modelSection = asRecord(parsed?.model);
+    if (
+      asString(modelSection?.provider) === activeProviderBackend &&
+      asString(modelSection?.api_key)
+    ) {
+      hasCredential = true;
+    }
+
+    const raw = asArray(parsed?.custom_providers);
+    if (raw) {
+      for (const entry of raw) {
+        const record = asRecord(entry);
+        const name = asString(record?.name);
+        if (!name) continue;
+        if (name !== customId && name.toLowerCase() !== customId.toLowerCase()) {
+          continue;
+        }
+        if (asString(record?.api_key) ?? asString(record?.apiKey)) {
+          hasCredential = true;
+        }
+        const envVar = asString(pick(record, "api_key_env", "apiKeyEnv", "key_env"));
+        if (envVar) {
+          requiredEnv.push(envVar);
+          if (env[envVar]) hasCredential = true;
+        }
+      }
+    }
+
+    providers.push({
+      name: activeProviderBackend,
+      requiredEnv,
+      envSet: hasCredential,
+    });
+    addEvidence(
+      `Provider: ${activeProviderBackend}`,
+      hasCredential ? "API key present" : "API key missing",
+      "config.yaml",
+    );
+    return;
+  }
+
+  if (alreadyListed(activeProviderBackend)) return;
+
+  const known = KNOWN_PROVIDERS.find((k) => k.name === activeProviderBackend);
+  if (!known) return;
+
+  const section = providersSection(parsed);
+  const entry = asRecord(pick(section, known.name));
+  const requiredEnvVar =
+    asString(pick(entry, "api_key_env", "apiKeyEnv", "key_env")) ?? known.defaultEnv;
+  const requiredEnv = requiredEnvVar ? [requiredEnvVar] : [];
+  const envSet = requiredEnv.length === 0 || Boolean(env[requiredEnvVar]);
+
+  providers.push({ name: known.name, requiredEnv, envSet });
+  addEvidence(
+    `Provider: ${known.name}`,
+    envSet ? "API key present" : "API key missing",
+    "config.yaml",
+  );
+
+  if (requiredEnvVar && env[requiredEnvVar]) {
+    const value = env[requiredEnvVar] ?? "";
+    const formatOk = known.keyPrefix ? value.startsWith(known.keyPrefix) : value.length > 0;
+    keyChecks.push({ provider: known.name, formatOk });
+  }
 }
 
 async function mergedEnv(

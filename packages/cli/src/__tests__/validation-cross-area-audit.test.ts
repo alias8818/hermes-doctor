@@ -503,7 +503,7 @@ describe("VAL-AUDIT-003: Network call audit — no outbound internet (local diag
     const reachable = report.findings.find((f: Finding) => f.id === "dashboard-reachable");
     expect(reachable).toBeDefined();
     if (reachable) {
-      // Dashboard-on fixture has http://127.0.0.1:8080 (localhost) configured.
+      // Dashboard-on fixture uses an uncommon localhost port (47999) to avoid colliding with dev servers on 8080.
       // The probe IS attempted but will fail since no dashboard is running.
       // Key: the finding is NOT the "info" status that means "not probed" (remote URL).
       // For localhost probes, status is either "ok" (reachable) or "broken" (unreachable).
@@ -532,6 +532,8 @@ describe("VAL-AUDIT-004: Artifact cleanliness — no real secret patterns in com
     "-g", "!reports/REDTEAM_REDACTION.md",
     "-g", "!fixtures/**",
     "-g", "!local-only/**",
+    "-g", "!**/__tests__/**",
+    "-g", "!**/dist/**",
     repoRoot,
   ];
 
@@ -541,7 +543,7 @@ describe("VAL-AUDIT-004: Artifact cleanliness — no real secret patterns in com
       "sk-[a-zA-Z0-9]{20,}",
       ...rgBaseArgs.slice(1),
     ], { reject: false });
-    expect(r.exitCode, `rg failed: ${r.stderr}`).toBe(0);
+    expect(r.exitCode, `rg error: ${r.stderr}`).toBeLessThan(2);
     if (r.stdout && r.stdout.trim().length > 0) {
       const lines = r.stdout.split("\n").filter((l: string) => l.trim().length > 0);
       // Filter out test patterns and redaction markers

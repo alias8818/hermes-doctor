@@ -1,6 +1,7 @@
 import type { CollectorResult } from "../schemas/collector.js";
 import { runCommand } from "../utils/exec.js";
 import { statSafe } from "../utils/fs.js";
+import { envForTrustedProbes } from "../utils/trusted-path.js";
 import { findExecutable } from "../utils/which.js";
 import type { CollectorContext } from "./context.js";
 import type { InstallData } from "./data.js";
@@ -28,7 +29,8 @@ export async function collectInstall(
   return runArea("install", EMPTY, ctx.redaction, async () => {
     const acc = newAccumulator();
 
-    const executablePath = await findExecutable("hermes", ctx.env);
+    const probeEnv = envForTrustedProbes(ctx.env);
+    const executablePath = await findExecutable("hermes", probeEnv);
     const onPath = executablePath !== null;
 
     if (!onPath) {
@@ -49,10 +51,10 @@ export async function collectInstall(
     const stat = await statSafe(executablePath);
     const permissionOk = stat !== null;
 
-    const version = await runCommand("hermes", {
+    const version = await runCommand(executablePath, {
       args: ["--version"],
       timeoutMs: ctx.commandTimeoutMs,
-      env: ctx.env,
+      env: probeEnv,
     });
 
     const versionString =
