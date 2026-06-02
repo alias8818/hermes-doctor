@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import * as crypto from "node:crypto";
 import * as os from "node:os";
 
-import { execa } from "execa";
+import { execa, execaSync } from "execa";
 import { describe, expect, it, beforeAll } from "vitest";
 import * as v from "valibot";
 
@@ -521,7 +521,7 @@ describe("VAL-AUDIT-004: Artifact cleanliness — no real secret patterns in com
 
   // Skip these tests if rg (ripgrep) is not available in the environment
   const rgAvailable = (() => {
-    try { execa.sync("rg", ["--version"], { reject: true }); return true; } catch { return false; }
+    try { execaSync("rg", ["--version"], { reject: true }); return true; } catch { return false; }
   })();
   const testOrSkip = rgAvailable ? it : it.skip;
   if (!rgAvailable) {
