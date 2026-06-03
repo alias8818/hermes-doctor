@@ -384,6 +384,7 @@ export const dynamicExecCheck: Check = {
 
 /** All security checks */
 export const securityChecks: Check[] = [
+  publicBindingCheck,
   secretLeaksCheck,
   terminalBackendCheck,
   filePermissionsCheck,

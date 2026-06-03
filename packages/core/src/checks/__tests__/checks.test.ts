@@ -1779,6 +1779,36 @@ describe("logs checks", () => {
 // Security checks
 // ---------------------------------------------------------------------------
 describe("security checks", () => {
+  it("security-public-binding: risk when public", () => {
+    const snap = minimalSnapshot({
+      security: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        publicBinding: true,
+        bindAddress: "0.0.0.0",
+      },
+    });
+    const findings = securityChecks[0]!.run(snap);
+    expect(first(findings).status).toBe("risk");
+    expect(first(findings).severity).toBe(4);
+    expect(first(findings).fixes.length).toBeGreaterThan(0);
+  });
+
+  it("security-public-binding: ok when localhost", () => {
+    const snap = minimalSnapshot({
+      security: {
+        status: "collected",
+        warnings: [],
+        errors: [],
+        publicBinding: false,
+        bindAddress: "127.0.0.1",
+      },
+    });
+    const findings = securityChecks[0]!.run(snap);
+    expect(first(findings).status).toBe("ok");
+  });
+
   it("security-secret-leaks: risk when leaks found", () => {
     const snap = minimalSnapshot({
       security: {
@@ -1790,7 +1820,7 @@ describe("security checks", () => {
         ],
       },
     });
-    const findings = securityChecks[0]!.run(snap);
+    const findings = securityChecks[1]!.run(snap);
     expect(first(findings).status).toBe("risk");
     expect(first(findings).severity).toBe(4);
     expect(first(findings).fixes.length).toBeGreaterThan(0);
@@ -1807,7 +1837,7 @@ describe("security checks", () => {
         sandboxEnabled: false,
       },
     });
-    const findings = securityChecks[1]!.run(snap);
+    const findings = securityChecks[2]!.run(snap);
     expect(first(findings).status).toBe("risk");
     expect(first(findings).severity).toBe(4);
   });
@@ -1823,7 +1853,7 @@ describe("security checks", () => {
         ],
       },
     });
-    const findings = securityChecks[2]!.run(snap);
+    const findings = securityChecks[3]!.run(snap);
     expect(first(findings).status).toBe("risk");
     expect(first(findings).severity).toBe(4);
     expect(first(findings).fixes.length).toBeGreaterThan(0);
@@ -1839,7 +1869,7 @@ describe("security checks", () => {
         exposedVars: ["ANTHROPIC_API_KEY"],
       },
     });
-    const findings = securityChecks[3]!.run(snap);
+    const findings = securityChecks[4]!.run(snap);
     expect(first(findings).status).toBe("risk");
     expect(first(findings).severity).toBe(4);
   });
@@ -1855,7 +1885,7 @@ describe("security checks", () => {
         ],
       },
     });
-    const findings = securityChecks[4]!.run(snap);
+    const findings = securityChecks[5]!.run(snap);
     expect(first(findings).status).toBe("risk");
     expect(first(findings).severity).toBe(4);
     expect(first(findings).fixes.length).toBeGreaterThan(0);
@@ -2104,7 +2134,7 @@ describe("edge cases", () => {
     }
   });
 
-  it("total check count is 57 (at least 20 required)", () => {
-    expect(allChecks.length).toBe(57);
+  it("total check count is 58 (at least 20 required)", () => {
+    expect(allChecks.length).toBe(58);
   });
 });
