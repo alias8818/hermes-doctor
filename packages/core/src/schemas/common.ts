@@ -83,7 +83,7 @@ export type Evidence = v.InferOutput<typeof EvidenceSchema>;
 export function normalizeEvidence(legacy: unknown[]): Evidence[] {
   return legacy.map((item, index) => {
     if (typeof item === "string") {
-      return { label: `${index}: ${item}`, detail: item };
+      return { label: `item ${index}`, detail: item };
     }
     // Already a structured Evidence object (or compatible shape)
     if (item !== null && typeof item === "object") {

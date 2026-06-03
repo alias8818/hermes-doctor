@@ -3,7 +3,10 @@ import * as path from "node:path";
 
 import fg from "fast-glob";
 
-import { REDACTION_PATTERNS } from "../redaction/index.js";
+import {
+  REDACTION_PATTERNS,
+  STRICT_REDACTION_PATTERNS,
+} from "../redaction/index.js";
 import type { CollectorResult } from "../schemas/collector.js";
 import {
   asBoolean,
@@ -33,14 +36,14 @@ const DYNAMIC_EXEC_PATTERNS: Array<{ label: string; pattern: RegExp; risk: strin
   { label: "exec", pattern: /\b(?:os\.system|subprocess|child_process|exec(?:Sync)?)\b/, risk: "medium" },
 ];
 
-function maskSecret(value: string): string {
-  const length = Math.min(12, Math.max(6, value.length));
-  return "*".repeat(length);
+function maskSecret(_value: string): string {
+  return "*".repeat(12);
 }
 
-function findLeaks(content: string, location: string): SecretLeak[] {
+function findLeaks(content: string, location: string, strict: boolean = false): SecretLeak[] {
   const leaks: SecretLeak[] = [];
-  for (const { type, regex } of REDACTION_PATTERNS) {
+  const patterns = strict ? [...REDACTION_PATTERNS, ...STRICT_REDACTION_PATTERNS] : REDACTION_PATTERNS;
+  for (const { type, regex } of patterns) {
     const matcher = new RegExp(regex.source, regex.flags);
     let match: RegExpExecArray | null;
     while ((match = matcher.exec(content)) !== null) {
@@ -89,51 +92,74 @@ export async function collectSecurity(
     const dynamicExecBlocks: DynamicExecBlock[] = [];
 
     if (config.raw) {
-      secretLeaks.push(...findLeaks(config.raw, "config.yaml"));
+      secretLeaks.push(...findLeaks(config.raw, "config.yaml", ctx.strictRedaction));
       dynamicExecBlocks.push(...findDynamicExec(config.raw, "config.yaml"));
     }
 
     const envRead = await readTextFile(ctx.paths.envFile);
     if (envRead.ok && envRead.content) {
-      secretLeaks.push(...findLeaks(envRead.content, ".env"));
+      secretLeaks.push(...findLeaks(envRead.content, ".env", ctx.strictRedaction));
     }
 
     // Scan skill SKILL.md files for secrets
-    const skillMdFiles = await fg(["**/SKILL.md"], {
-      cwd: ctx.paths.skillsDir,
-      onlyFiles: true,
-      dot: true,
-      suppressErrors: true,
-    });
+    let skillMdFiles: string[] = [];
+    try {
+      skillMdFiles = await fg(["**/SKILL.md"], {
+        cwd: ctx.paths.skillsDir,
+        onlyFiles: true,
+        dot: true,
+      });
+    } catch (err) {
+      acc.warnings.push(
+        `Error scanning skills directory for secrets: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
     for (const rel of skillMdFiles) {
       const absPath = path.join(ctx.paths.skillsDir, rel);
       const readResult = await readTextFile(absPath);
       if (readResult.ok && readResult.content) {
-        secretLeaks.push(...findLeaks(readResult.content, absPath));
+        secretLeaks.push(...findLeaks(readResult.content, absPath, ctx.strictRedaction));
       }
     }
 
     // Scan plugin manifest files for secrets
-    const pluginManifests = await fg(["**/{plugin.json,manifest.json,package.json}"], {
-      cwd: ctx.paths.pluginsDir,
-      onlyFiles: true,
-      dot: true,
-      suppressErrors: true,
-    });
+    let pluginManifests: string[] = [];
+    try {
+      pluginManifests = await fg(["**/{plugin.json,manifest.json,package.json}"], {
+        cwd: ctx.paths.pluginsDir,
+        onlyFiles: true,
+        dot: true,
+      });
+    } catch (err) {
+      acc.warnings.push(
+        `Error scanning plugin manifests for secrets: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
     for (const rel of pluginManifests) {
       const absPath = path.join(ctx.paths.pluginsDir, rel);
       const readResult = await readTextFile(absPath);
       if (readResult.ok && readResult.content) {
-        secretLeaks.push(...findLeaks(readResult.content, absPath));
+        secretLeaks.push(...findLeaks(readResult.content, absPath, ctx.strictRedaction));
       }
     }
 
     const envExposure = secretLeaks.some((leak) => leak.location === "config.yaml");
 
+    // Pre-compile regex patterns once (issue #43) and include strict patterns when enabled (issue #50)
+    const leakPatterns = REDACTION_PATTERNS.map(
+      (p) => new RegExp(p.regex.source, p.regex.flags.replace("g", "")),
+    );
+    if (ctx.strictRedaction) {
+      leakPatterns.push(
+        ...STRICT_REDACTION_PATTERNS.map(
+          (p) => new RegExp(p.regex.source, p.regex.flags.replace("g", "")),
+        ),
+      );
+    }
     const exposedVars = Object.entries(ctx.env)
       .filter(([, value]) =>
         typeof value === "string" &&
-        REDACTION_PATTERNS.some((p) => new RegExp(p.regex.source, p.regex.flags.replace("g", "")).test(value)),
+        leakPatterns.some((regex) => regex.test(value)),
       )
       .map(([key]) => key);
 
@@ -173,11 +199,10 @@ export async function collectSecurity(
 
 async function checkPermissions(
   ctx: CollectorContext,
-  secretLeaks: SecretLeak[],
+  _secretLeaks: SecretLeak[],
 ): Promise<PermissionIssue[]> {
   if (os.platform() === "win32") return [];
   const issues: PermissionIssue[] = [];
-  const hasConfigSecret = secretLeaks.some((l) => l.location === "config.yaml");
 
   for (const file of SECRET_FILES) {
     const target = path.join(ctx.paths.home, file);
@@ -189,7 +214,7 @@ async function checkPermissions(
       file === ".env" ||
       file === "auth.json" ||
       file === "credentials.json" ||
-      (file === "config.yaml" && hasConfigSecret);
+      file === "config.yaml"; // Always check config.yaml (issue #41)
     if (isSensitive && groupOrOther !== 0) {
       issues.push({
         path: target,

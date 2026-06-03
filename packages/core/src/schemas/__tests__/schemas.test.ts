@@ -177,8 +177,8 @@ describe("normalizeEvidence", () => {
   it("converts legacy string[] to structured Evidence objects", () => {
     const result = normalizeEvidence(["foo", "bar"]);
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ label: "0: foo", detail: "foo" });
-    expect(result[1]).toEqual({ label: "1: bar", detail: "bar" });
+    expect(result[0]).toEqual({ label: "item 0", detail: "foo" });
+    expect(result[1]).toEqual({ label: "item 1", detail: "bar" });
   });
 
   it("passes through pre-structured Evidence objects unchanged", () => {
@@ -193,7 +193,7 @@ describe("normalizeEvidence", () => {
   it("handles mixed string and object arrays", () => {
     const result = normalizeEvidence(["foo", { label: "L", detail: "D", source: "log" }]);
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ label: "0: foo", detail: "foo" });
+    expect(result[0]).toEqual({ label: "item 0", detail: "foo" });
     expect(result[1]).toEqual({ label: "L", detail: "D", source: "log" });
   });
 
