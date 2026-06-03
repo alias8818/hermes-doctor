@@ -127,6 +127,22 @@ export const versionCheck: Check = {
       ];
     }
 
+    // If hermes is on PATH but version couldn't be determined (e.g. safety skip),
+    // it's informational, not broken
+    if (inst.onPath) {
+      return [
+        finding(
+          "install-version",
+          "install",
+          "info",
+          0,
+          "Hermes Version Unknown",
+          "Hermes was found but version could not be determined. The version probe may have been skipped for safety.",
+          ev,
+        ),
+      ];
+    }
+
     return [
       finding(
         "install-version",
