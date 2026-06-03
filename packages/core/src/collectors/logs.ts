@@ -107,9 +107,26 @@ export async function collectLogs(
     let errorCount = 0;
     let remaining = maxLinesRead;
 
+    const maxLogFileBytes = ctx.thresholds.hugeFileBytes ?? 104_857_600; // 100 MB default
+
     for (const name of logNames) {
       const filePath = path.join(logsDir, name);
       const stat = await statSafe(filePath);
+
+      // Skip files that are too large to safely read into memory
+      if (stat !== null && stat.size > maxLogFileBytes) {
+        logFiles.push({
+          path: filePath,
+          readable: false,
+          sizeBytes: stat.size,
+          linesRead: 0,
+        });
+        acc.warnings.push(
+          `log file exceeds size limit (${(stat.size / 1_048_576).toFixed(1)} MB > ${(maxLogFileBytes / 1_048_576).toFixed(0)} MB) and was skipped: ${name}`,
+        );
+        continue;
+      }
+
       const read = await readTextFile(filePath);
       if (!read.ok || read.content === null) {
         logFiles.push({

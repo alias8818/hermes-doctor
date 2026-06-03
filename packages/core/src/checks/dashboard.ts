@@ -66,6 +66,28 @@ export const dashboardReachableCheck: Check = {
       ];
     }
 
+    // If the probe ran but reachability is unknown (collector failed, timeout, etc.),
+    // report uncertain status rather than falsely claiming unreachable
+    if (dash.reachable === undefined || dash.reachable === null) {
+      return [
+        finding(
+          "dashboard-reachable",
+          "dashboard",
+          "unknown",
+          0,
+          "Dashboard Reachability Unknown",
+          `Dashboard at ${dash.url} could not be probed — reachability status is unknown`,
+          ev,
+          [
+            fix("Check dashboard connectivity manually", {
+              command: `curl -s -o /dev/null -w "%{http_code}" ${dash.url}`,
+              risk: "low",
+            }),
+          ],
+        ),
+      ];
+    }
+
     return [
       finding(
         "dashboard-reachable",
@@ -323,7 +345,9 @@ export const tlsCheck: Check = {
       ];
     }
 
-    if (!dash.tls) {
+    // dash.tls is undefined when the probe couldn't determine TLS status —
+    // only flag plain HTTP when we're certain (explicit false)
+    if (dash.tls === false) {
       return [
         finding(
           "dashboard-tls",
