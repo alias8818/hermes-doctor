@@ -17,21 +17,21 @@ export function trustedPathDirectories(platform: string = os.platform()): string
 }
 
 /**
- * Environment with PATH that prefers trusted system directories but preserves
- * existing PATH entries.  Trusted directories are prepended so that system
- * commands (`docker`, `git`, …) are resolved first (preventing attacker-controlled
- * overrides), while user-installed tools (`hermes`, …) are still discoverable
- * from the original PATH.
+ * Environment with PATH restricted to trusted directories only.
+ *
+ * Prevents execution of attacker-controlled binaries from a hostile PATH
+ * (e.g. CI checkout directories, untrusted workspaces). The caller can
+ * provide additional trusted directories (such as the Hermes home bin/)
+ * which are prepended before the standard system directories.
  */
 export function envForTrustedProbes(
   env: NodeJS.ProcessEnv = process.env,
+  extraTrustedDirs: string[] = [],
 ): NodeJS.ProcessEnv {
   const delim = os.platform() === "win32" ? ";" : ":";
-  const existing = env.PATH ?? "";
-  const existingEntries = existing.length > 0 ? existing.split(delim) : [];
-  const allDirs = [...trustedPathDirectories(os.platform()), ...existingEntries];
+  const dirs = [...extraTrustedDirs, ...trustedPathDirectories(os.platform())];
   return {
     ...env,
-    PATH: [...new Set(allDirs)].join(delim),
+    PATH: dirs.join(delim),
   };
 }

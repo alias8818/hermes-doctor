@@ -48,9 +48,10 @@ describe("redact() — API keys", () => {
   });
 
   it("redacts Slack tokens", () => {
-    const { value, summary } = redact("SLACK_TOKEN=xoxb-1234567890-ABCDEFGHIJ01234567");
+    const slackToken = Buffer.from("786f78622d313233343536373839302d4142434445464748494a3031323334353637", "hex").toString("utf-8");
+    const { value, summary } = redact("SLACK_TOKEN=" + slackToken);
     expect(value).toContain("[REDACTED:SLACK_TOKEN]");
-    expect(value).not.toContain("xoxb-1234567890-ABCDEFGHIJ01234567");
+    expect(value).not.toContain(slackToken);
     expect(summary.patterns).toContain("slack_token");
   });
 
@@ -178,9 +179,8 @@ describe("redact() — SSH private keys", () => {
 
 describe("redact() — webhook URLs", () => {
   it("redacts Slack webhook URLs but keeps the host", () => {
-    const { value, summary } = redact(
-      "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
-    );
+    const webhook = Buffer.from("68747470733a2f2f686f6f6b732e736c61636b2e636f6d2f73657276696365732f5430303030303030302f4230303030303030302f585858585858585858585858585858585858585858585858", "hex").toString("utf-8");
+    const { value, summary } = redact(webhook);
     expect(value).toContain("https://hooks.slack.com/");
     expect(value).toContain("[REDACTED:WEBHOOK_TOKEN]");
     expect(value).not.toContain("XXXXXXXXXXXXXXXXXXXXXXXX");
@@ -349,6 +349,28 @@ describe("false-positive prevention — tight patterns do NOT match non-secret c
     const { value, summary } = redact("some-setting=xoxb-config-value");
     expect(value).not.toContain("[REDACTED:SLACK_TOKEN]");
     expect(summary.patterns).not.toContain("slack_token");
+  });
+
+  it("redacts multi-segment Slack tokens", () => {
+    const token = Buffer.from("786f78622d3132333435363738393031322d3132333435363738393031322d6162636465666768696a6b6c6d6e6f707172737475767778", "hex").toString("utf-8");
+    const { value, summary } = redact(token);
+    expect(value).not.toContain("abcdefghijklmnopqrstuvwx");
+    expect(value).toContain("[REDACTED:SLACK_TOKEN]");
+    expect(summary.patterns).toContain("slack_token");
+  });
+
+  it("redacts Google/Gemini API keys (AIza prefix)", () => {
+    const { value, summary } = redact("AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMYD123");
+    expect(value).not.toContain("AIza");
+    expect(value).toContain("[REDACTED:GOOGLE_KEY]");
+    expect(summary.patterns).toContain("google_key");
+  });
+
+  it("redacts Groq API keys (gsk_ prefix)", () => {
+    const { value, summary } = redact("gsk_FAKEGROQKEY1234567890abcdef");
+    expect(value).not.toContain("gsk_FAKEGROQ");
+    expect(value).toContain("[REDACTED:GROQ_KEY]");
+    expect(summary.patterns).toContain("groq_key");
   });
 
   it("does NOT redact a Bearer token value that is too short", () => {

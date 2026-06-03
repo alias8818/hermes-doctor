@@ -1,3 +1,5 @@
+import * as path from "node:path";
+
 import { mergeThresholds, type Thresholds } from "../checks/thresholds.js";
 import type { RedactionOptions } from "../redaction/index.js";
 import {
@@ -44,11 +46,23 @@ export function createCollectorContext(
   const home = resolveHermesHome({ hermesHome: options.hermesHome, env });
   const strictRedaction = options.strictRedaction ?? false;
   const baseRedaction = options.redaction ?? { homeDir: home };
+
+  // Prepend the Hermes home bin/ directory to PATH so that the install
+  // collector can discover the hermes binary without including untrusted
+  // PATH entries.  System commands (docker, git) are still resolved from
+  // trusted system directories by envForTrustedProbes.
+  const delim = process.platform === "win32" ? ";" : ":";
+  const hermesBin = path.join(home, "bin");
+  const safeEnv = {
+    ...env,
+    PATH: [hermesBin, env.PATH ?? ""].join(delim),
+  };
+
   return {
     hermesHome: home,
     paths: hermesPaths(home),
     profile: options.profile ?? env.HERMES_PROFILE ?? "default",
-    env,
+    env: safeEnv,
     redaction: { ...baseRedaction, strictRedaction },
     commandTimeoutMs: options.commandTimeoutMs ?? 10_000,
     dashboardTimeoutMs:

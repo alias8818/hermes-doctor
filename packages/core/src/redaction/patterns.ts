@@ -1,6 +1,8 @@
 export type RedactionPatternType =
   | "anthropic_key"
   | "openai_key"
+  | "google_key"
+  | "groq_key"
   | "github_token"
   | "slack_token"
   | "telegram_token"
@@ -80,6 +82,18 @@ export const REDACTION_PATTERNS: RedactionPattern[] = [
     replacement: "[REDACTED:OPENAI_KEY]",
   },
   {
+    type: "google_key",
+    // Google/Gemini API keys: AIza prefix + 35+ alphanumeric/underscore/dash chars
+    regex: /\bAIza[A-Za-z0-9_-]{35,}\b/g,
+    replacement: "[REDACTED:GOOGLE_KEY]",
+  },
+  {
+    type: "groq_key",
+    // Groq API keys: gsk_ prefix + 20+ alphanumeric chars
+    regex: /\bgsk_[A-Za-z0-9]{20,}\b/g,
+    replacement: "[REDACTED:GROQ_KEY]",
+  },
+  {
     type: "github_token",
     regex: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{16,}\b/g,
     replacement: "[REDACTED:GITHUB_TOKEN]",
@@ -91,7 +105,8 @@ export const REDACTION_PATTERNS: RedactionPattern[] = [
   },
   {
     type: "slack_token",
-    regex: /\bxox[baprs]-\d+-[A-Za-z0-9]{8,}/g,
+    // Slack tokens have 3+ hyphenated segments: xox[baprs]-<digits>-<alnum>-<alnum>...
+    regex: /\bxox[baprs]-\d+(?:-[A-Za-z0-9]+)+\b/g,
     replacement: "[REDACTED:SLACK_TOKEN]",
   },
   {

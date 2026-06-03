@@ -1,3 +1,5 @@
+import * as path from "node:path";
+
 import type { CollectorResult } from "../schemas/collector.js";
 import { runCommand } from "../utils/exec.js";
 import { statSafe } from "../utils/fs.js";
@@ -29,7 +31,7 @@ export async function collectInstall(
   return runArea("install", EMPTY, ctx.redaction, async () => {
     const acc = newAccumulator();
 
-    const probeEnv = envForTrustedProbes(ctx.env);
+    const probeEnv = envForTrustedProbes(ctx.env, [path.join(ctx.hermesHome, "bin")]);
     const executablePath = await findExecutable("hermes", probeEnv);
     const onPath = executablePath !== null;
 
