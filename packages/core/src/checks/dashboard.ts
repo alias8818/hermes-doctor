@@ -80,7 +80,7 @@ export const dashboardReachableCheck: Check = {
           ev,
           [
             fix("Check dashboard connectivity manually", {
-              command: `curl -s -o /dev/null -w "%{http_code}" ${dash.url}`,
+              command: `curl -s -o /dev/null -w "%{http_code}" ${shellQuote(dash.url ?? "http://127.0.0.1:8080")}`,
               risk: "low",
             }),
           ],

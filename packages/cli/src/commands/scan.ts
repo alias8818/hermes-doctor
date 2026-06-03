@@ -203,17 +203,33 @@ async function executeScan(options: ScanOptions): Promise<void> {
   // Determine Flue mode
   const flueEnabled = shouldEnableFlue(options);
 
-  // Parse --max-log-lines
-  const maxLogLines = options.maxLogLines
-    ? parseInt(options.maxLogLines, 10)
-    : 500;
+  // Parse --max-log-lines with validation
+  let maxLogLines = 500;
+  if (options.maxLogLines) {
+    const parsed = parseInt(options.maxLogLines, 10);
+    if (isNaN(parsed)) {
+      process.stderr.write(
+        `Error: --max-log-lines must be a number, got '${options.maxLogLines}'\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    if (parsed < 1) {
+      process.stderr.write(
+        `Error: --max-log-lines must be a positive number, got ${parsed}\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    maxLogLines = parsed;
+  }
 
   // Step 1: Run all collectors with all options
   const collectorResults = await collectAll({
     hermesHome: hermesHome.path,
     profile,
     includeLogSnippets: options.includeLogSnippets ?? false,
-    maxLogLines: isNaN(maxLogLines) ? 500 : maxLogLines,
+    maxLogLines,
     strictRedaction: options.strictRedaction ?? false,
   });
 

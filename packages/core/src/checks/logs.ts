@@ -58,7 +58,9 @@ export const recentErrorsCheck: Check = {
     const crashRecentThreshold = snapshot.thresholds?.crashLoopRecentErrors ?? 20;
     // Both thresholds must be exceeded — a system with many historical errors
     // but few recent ones is not crash-looping, and vice versa.
-    const isCrashLoop = errorCount > crashErrorThreshold && recentErrors.length > crashRecentThreshold;
+    // Use >= for recentErrors — the collector caps at 20 and the default threshold is 20,
+    // so strict > would make the default crash-loop state unreachable.
+    const isCrashLoop = errorCount > crashErrorThreshold && recentErrors.length >= crashRecentThreshold;
 
     return [
       finding(
