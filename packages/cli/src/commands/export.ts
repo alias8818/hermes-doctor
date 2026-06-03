@@ -3,6 +3,9 @@ import * as path from "node:path";
 
 import type { Command } from "commander";
 
+import { renderMarkdown } from "../output/markdown-renderer.js";
+import { renderJson } from "../output/json-renderer.js";
+
 /**
  * Find the most recent scan report in the output directory.
  * Reports are named hermes-doctor-report.json or hermes-doctor-report.md.
@@ -75,8 +78,18 @@ async function executeExport(options: ExportOptions): Promise<void> {
   const outputDir = options.output ?? defaultOutputDir();
   const format = options.format ?? "markdown";
 
-  const lastReport = findLastReport(outputDir);
-  if (!lastReport) {
+  if (format !== "markdown" && format !== "json") {
+    process.stderr.write(
+      `Error: Unsupported format '${format}'. Use 'markdown' or 'json'.\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  // Always find the JSON report — we re-render from JSON using the proper
+  // renderer functions, which apply redaction and escaping defense-in-depth.
+  const jsonReport = findLastReportOfType(outputDir, ".json");
+  if (!jsonReport) {
     process.stderr.write(
       `Error: No previous scan report found in ${outputDir}. Run 'hermes-doctor scan' first.\n`,
     );
@@ -84,124 +97,31 @@ async function executeExport(options: ExportOptions): Promise<void> {
     return;
   }
 
-  const ext = format === "json" ? ".json" : ".md";
-  const sourcePath = lastReport;
-  const sourceExt = path.extname(sourcePath);
+  const jsonContent = fs.readFileSync(jsonReport, "utf-8");
+  const report = JSON.parse(jsonContent);
 
-  // If the source format matches the requested format, just output it
-  if (sourceExt === ext) {
-    const content = fs.readFileSync(sourcePath, "utf-8");
-    process.stdout.write(content);
+  if (format === "json") {
+    // Re-render from JSON to apply redaction defense-in-depth
+    process.stdout.write(renderJson(report));
     return;
   }
 
-  // If format mismatch, try to find a file with the right extension
-  const dir = path.dirname(sourcePath);
-  const matchingFile = path.join(dir, `hermes-doctor-report${ext}`);
-  if (fs.existsSync(matchingFile)) {
-    const content = fs.readFileSync(matchingFile, "utf-8");
-    process.stdout.write(content);
-    return;
-  }
+  // Re-render markdown from JSON using the proper renderer — this applies
+  // redactDeep, escapeMd, and consistent formatting
+  process.stdout.write(renderMarkdown(report));
+}
 
-  // No matching format found, read the JSON source and re-render if possible
-  if (sourceExt === ".json") {
-    const jsonContent = fs.readFileSync(sourcePath, "utf-8");
-    const report = JSON.parse(jsonContent);
-
-    if (format === "markdown") {
-      // Basic markdown conversion from JSON report
-      const lines: string[] = [];
-      lines.push("# Hermes Doctor — Health Report");
-      lines.push("");
-      lines.push(`_Generated: ${report.generatedAt}  |  Profile: ${report.profile}_`);
-      if (report.hermesHome) {
-        lines.push(`_Hermes Home: ${report.hermesHome}_`);
-      }
-      lines.push("");
-      lines.push("## Summary");
-      lines.push("");
-      lines.push("| Status | Count |");
-      lines.push("|--------|-------|");
-      const s = report.summary;
-      if (s.ok > 0) lines.push(`| ✅ OK | ${s.ok} |`);
-      if (s.info > 0) lines.push(`| ℹ️ Info | ${s.info} |`);
-      if (s.warnings > 0) lines.push(`| ⚠️ Warnings | ${s.warnings} |`);
-      if (s.broken > 0) lines.push(`| ❌ Broken | ${s.broken} |`);
-      if (s.risks > 0) lines.push(`| 🔴 Risks | ${s.risks} |`);
-      if (s.unknown > 0) lines.push(`| ❓ Unknown | ${s.unknown} |`);
-      lines.push(`| **Total** | **${s.total}** |`);
-      lines.push("");
-
-      for (const finding of report.findings) {
-        lines.push(`### ${finding.title}`);
-        lines.push("");
-        lines.push(`**Status:** ${finding.status}`);
-        lines.push("");
-        lines.push(finding.message);
-        lines.push("");
-
-        const evidenceEntries = Object.entries(finding.evidence || {});
-        if (evidenceEntries.length > 0) {
-          lines.push("**Evidence:**");
-          lines.push("");
-          for (const [key, value] of evidenceEntries) {
-            const display = typeof value === "string" ? value : JSON.stringify(value);
-            lines.push(`- \`${key}\`: ${display}`);
-          }
-          lines.push("");
-        }
-
-        if (finding.fixes && finding.fixes.length > 0) {
-          lines.push("**Fix:**");
-          lines.push("");
-          for (const fix of finding.fixes) {
-            lines.push(`- **${fix.title}**`);
-            if (fix.risk) {
-              lines.push(`  - Risk: \`${fix.risk.toUpperCase()}\``);
-            }
-            if (fix.requiresConfirmation) {
-              lines.push("  - ⚠️ Requires confirmation before applying");
-            }
-            if (fix.command) {
-              lines.push("  ```bash");
-              lines.push(`  ${fix.command}`);
-              lines.push("  ```");
-            }
-            if (fix.description) {
-              lines.push(`  _${fix.description}_`);
-            }
-            if (fix.manualSteps && fix.manualSteps.length > 0) {
-              lines.push("  - Manual steps:");
-              for (const step of fix.manualSteps) {
-                lines.push(`    - ${step}`);
-              }
-            }
-            if (fix.rollback) {
-              lines.push(`  - Rollback: _${fix.rollback}_`);
-            }
-          }
-          lines.push("");
-        }
-      }
-
-      lines.push("## Privacy");
-      lines.push("");
-      lines.push("> ✅ This report has been redacted for sharing.");
-      lines.push("");
-
-      process.stdout.write(lines.join("\n"));
-      return;
-    }
-
-    process.stderr.write(
-      `Error: No ${format} report available in ${outputDir}. Run a scan with --format ${format} first.\n`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  // Read and output the source file
-  const content = fs.readFileSync(sourcePath, "utf-8");
-  process.stdout.write(content);
+function findLastReportOfType(dir: string, ext: string): string | null {
+  if (!fs.existsSync(dir)) return null;
+  const entries = fs.readdirSync(dir);
+  const matches = entries.filter(
+    (f) => f.startsWith("hermes-doctor-report") && path.extname(f) === ext,
+  );
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => {
+    const aTime = fs.statSync(path.join(dir, a)).mtimeMs;
+    const bTime = fs.statSync(path.join(dir, b)).mtimeMs;
+    return bTime - aTime;
+  });
+  return path.join(dir, matches[0]!);
 }

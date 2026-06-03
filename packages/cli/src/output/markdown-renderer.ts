@@ -154,7 +154,7 @@ export function renderMarkdown(report: DoctorReport): string {
       lines.push("");
       lines.push(`**Status:** ${statusLabel(finding.status)}`);
       lines.push("");
-      lines.push(finding.message);
+      lines.push(escapeMd(finding.message));
       lines.push("");
 
       if (finding.details) {
