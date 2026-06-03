@@ -190,6 +190,7 @@ export function redactDeep(
   options: RedactionOptions = {},
 ): DeepRedactionResult {
   const summaries: RedactionSummary[] = [];
+  const visited = new WeakSet<object>();
 
   const walk = (node: unknown): unknown => {
     if (typeof node === "string") {
@@ -198,9 +199,13 @@ export function redactDeep(
       return redacted;
     }
     if (Array.isArray(node)) {
+      if (visited.has(node)) return "[Circular]";
+      visited.add(node);
       return node.map(walk);
     }
     if (node !== null && typeof node === "object") {
+      if (visited.has(node)) return "[Circular]";
+      visited.add(node);
       const result: Record<string, unknown> = {};
       for (const [key, child] of Object.entries(node)) {
         result[key] = walk(child);

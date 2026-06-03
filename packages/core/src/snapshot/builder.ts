@@ -138,6 +138,7 @@ function collectWarnings(results: CollectorResults): string[] {
 function scanRedactionMarkers(value: unknown): RedactionSummary {
   const summary = createRedactionSummary();
   const patterns = new Set<string>();
+  const visited = new WeakSet<object>();
 
   const walk = (node: unknown): void => {
     if (typeof node === "string") {
@@ -157,10 +158,14 @@ function scanRedactionMarkers(value: unknown): RedactionSummary {
         summary.homePathRedactions += homeMatches.length;
       }
     } else if (Array.isArray(node)) {
+      if (visited.has(node)) return;
+      visited.add(node);
       for (const item of node) {
         walk(item);
       }
     } else if (node !== null && typeof node === "object") {
+      if (visited.has(node)) return;
+      visited.add(node);
       for (const child of Object.values(node)) {
         walk(child);
       }
