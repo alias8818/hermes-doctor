@@ -9,7 +9,7 @@ import {
   loadHermesConfig,
   pick,
 } from "../utils/config.js";
-import { listDir, pathExists, readTextFile } from "../utils/fs.js";
+import { listDir, readTextFile, statSafe } from "../utils/fs.js";
 import type { CollectorContext } from "./context.js";
 import type { PluginsData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
@@ -120,11 +120,9 @@ async function findManifest(
 ): Promise<{ path: string; raw: string } | null> {
   for (const name of MANIFEST_NAMES) {
     const candidate = path.join(dir, name);
-    if (await pathExists(candidate)) {
-      const read = await readTextFile(candidate);
-      if (read.ok && read.content !== null) {
-        return { path: candidate, raw: read.content };
-      }
+    const read = await readTextFile(candidate);
+    if (read.ok && read.content !== null) {
+      return { path: candidate, raw: read.content };
     }
   }
   return null;
@@ -210,8 +208,8 @@ export async function collectPlugins(
             ? path.join(ctx.paths.home, configEntry.path)
             : path.join(ctx.paths.pluginsDir, name);
 
-      const exists = await pathExists(pluginDir);
-      const manifest = exists ? await findManifest(pluginDir) : null;
+      const exists = (await statSafe(pluginDir)) !== null;
+      const manifest = await findManifest(pluginDir);
 
       const entry: PluginEntry = {
         name,

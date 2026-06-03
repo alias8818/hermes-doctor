@@ -45,6 +45,11 @@ export async function collectMemory(ctx: CollectorContext): Promise<CollectorRes
   return runArea("memory", EMPTY, ctx.redaction, async () => {
     const acc = newAccumulator();
     const config = await loadHermesConfig(ctx.paths.config);
+    if (config.parsed === null && config.exists) {
+      acc.warnings.push(
+        `memory configuration cannot be read due to YAML parse error: ${config.error ?? "unknown error"}`,
+      );
+    }
     const section = asRecord(pick(config.parsed, "memory"));
 
     const configuredDir = asString(pick(section, "dir", "path", "directory"));

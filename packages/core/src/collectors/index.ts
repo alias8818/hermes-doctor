@@ -59,23 +59,14 @@ export interface CollectorResults {
   security: CollectorResult<SecurityData>;
 }
 
+const COLLECT_ALL_TIMEOUT_MS = 60_000;
+
 export async function collectAll(
   options: CollectorContext | CreateCollectorContextOptions = {},
 ): Promise<CollectorResults> {
   const ctx = isContext(options) ? options : createCollectorContext(options);
-  const [
-    system,
-    install,
-    config,
-    dashboard,
-    providers,
-    mcp,
-    memory,
-    skills,
-    plugins,
-    logs,
-    security,
-  ] = await Promise.all([
+
+  const collectorPromises = Promise.all([
     collectSystem(ctx),
     collectInstall(ctx),
     collectConfig(ctx),
@@ -88,6 +79,27 @@ export async function collectAll(
     collectLogs(ctx),
     collectSecurity(ctx),
   ]);
+
+  const collected = await Promise.race([
+    collectorPromises,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("collectAll timed out after " + COLLECT_ALL_TIMEOUT_MS + "ms")), COLLECT_ALL_TIMEOUT_MS);
+    }),
+  ]);
+
+  const [
+    system,
+    install,
+    config,
+    dashboard,
+    providers,
+    mcp,
+    memory,
+    skills,
+    plugins,
+    logs,
+    security,
+  ] = collected;
 
   return {
     system,

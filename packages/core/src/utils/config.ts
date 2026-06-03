@@ -76,19 +76,55 @@ export async function loadHermesConfig(
 
 export function parseEnvFile(content: string): Record<string, string> {
   const result: Record<string, string> = {};
+
+  const joinedLines: string[] = [];
   for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
+    if (joinedLines.length > 0) {
+      const prev = joinedLines[joinedLines.length - 1]!;
+      if (prev.endsWith("\\") && !prev.trimStart().startsWith("#")) {
+        joinedLines[joinedLines.length - 1] = prev.slice(0, -1) + rawLine;
+        continue;
+      }
+    }
+    joinedLines.push(rawLine);
+  }
+
+  for (const joined of joinedLines) {
+    const line = joined.trim();
     if (line.length === 0 || line.startsWith("#")) continue;
-    const withoutExport = line.startsWith("export ") ? line.slice("export ".length) : line;
+
+    const withoutExport = line.startsWith("export ") ? line.slice("export ".length).trimStart() : line;
     const eq = withoutExport.indexOf("=");
     if (eq <= 0) continue;
+
     const key = withoutExport.slice(0, eq).trim();
     let value = withoutExport.slice(eq + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
+    if (key.length === 0) continue;
+
+    const isSingleQuoted = value.startsWith("'") && value.endsWith("'");
+    const isDoubleQuoted = value.startsWith('"') && value.endsWith('"');
+
+    if (isSingleQuoted || isDoubleQuoted) {
+      const inner = value.slice(1, -1);
+      const quoteChar = value[0]!;
+      value = inner.replace(new RegExp("\\\\" + quoteChar, "g"), quoteChar);
+    } else if (value.length > 0 && (value[0] === '"' || value[0] === "'")) {
+      const quoteChar = value[0]!;
+      value = value.slice(1).replace(new RegExp("\\\\" + quoteChar, "g"), quoteChar);
     }
-    if (key.length > 0) result[key] = value;
+
+    if (!isSingleQuoted) {
+      value = value.replace(/\$\{([^}]+)\}/g, (_match: string, varName: string): string => {
+        return result[varName] !== undefined ? result[varName] : process.env[varName] ?? "";
+      });
+      value = value.replace(/\$([a-zA-Z_]\w*)/g, (_match: string, varName: string): string => {
+        return result[varName] !== undefined ? result[varName] : process.env[varName] ?? "";
+      });
+    }
+
+    result[key] = value;
   }
+
   return result;
 }
 

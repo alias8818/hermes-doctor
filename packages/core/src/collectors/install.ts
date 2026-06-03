@@ -7,7 +7,7 @@ import { envForTrustedProbes } from "../utils/trusted-path.js";
 import { findExecutable } from "../utils/which.js";
 import type { CollectorContext } from "./context.js";
 import type { InstallData } from "./data.js";
-import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
+import { addEvidence, finalize, runArea } from "./result.js";
 
 const EMPTY: InstallData = { installMethod: "unknown" };
 
@@ -28,8 +28,7 @@ function inferInstallMethod(
 export async function collectInstall(
   ctx: CollectorContext,
 ): Promise<CollectorResult<InstallData>> {
-  return runArea("install", EMPTY, ctx.redaction, async () => {
-    const acc = newAccumulator();
+  return runArea("install", EMPTY, ctx.redaction, async (acc) => {
 
     // Discover hermes in the scanned home (read-only — never execute from here)
     const homeBinHermes = path.join(ctx.hermesHome, "bin", "hermes");

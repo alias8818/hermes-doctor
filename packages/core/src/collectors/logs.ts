@@ -1,7 +1,7 @@
 import * as path from "node:path";
 
 import type { CollectorResult } from "../schemas/collector.js";
-import { listDir, readTextFile, statSafe } from "../utils/fs.js";
+import { isBinaryFile, listDir, readTextFile, statSafe } from "../utils/fs.js";
 import type { CollectorContext } from "./context.js";
 import type { LogsData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";

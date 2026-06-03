@@ -69,17 +69,17 @@ export async function runArea<T>(
   area: FindingArea,
   emptyData: T,
   options: RedactionOptions,
-  fn: () => Promise<CollectorResult<T>>,
+  fn: (acc: CollectorAccumulator) => Promise<CollectorResult<T>>,
 ): Promise<CollectorResult<T>> {
   const start = Date.now();
+  const acc = newAccumulator();
   try {
-    const result = await fn();
+    const result = await fn(acc);
     if (result.durationMs === undefined) {
       result.durationMs = Date.now() - start;
     }
     return result;
   } catch (error) {
-    const acc = newAccumulator();
     acc.errors.push(errorMessage(error));
     const result = finalize(area, "failed", emptyData, acc, options);
     result.durationMs = Date.now() - start;

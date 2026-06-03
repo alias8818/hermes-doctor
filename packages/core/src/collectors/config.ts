@@ -5,7 +5,7 @@ import {
   asString,
   loadHermesConfig,
 } from "../utils/config.js";
-import { pathExists } from "../utils/fs.js";
+import { statSafe } from "../utils/fs.js";
 import type { CollectorContext } from "./context.js";
 import type { ConfigData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
@@ -65,7 +65,7 @@ export async function collectConfig(
     const acc = newAccumulator();
     const { paths } = ctx;
 
-    const homeExists = await pathExists(paths.home);
+    const homeExists = (await statSafe(paths.home)) !== null;
     const config = await loadHermesConfig(paths.config);
 
     addEvidence(acc, "Home", paths.home);

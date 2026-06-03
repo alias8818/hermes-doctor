@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import fg from "fast-glob";
 
-import { REDACTION_PATTERNS } from "../redaction/index.js";
+import { REDACTION_PATTERNS, STRICT_REDACTION_PATTERNS } from "../redaction/index.js";
 import type { CollectorResult } from "../schemas/collector.js";
 import {
   asBoolean,
@@ -16,7 +16,7 @@ import { readTextFile, statSafe } from "../utils/fs.js";
 import type { CollectorContext } from "./context.js";
 import type { SecurityData } from "./data.js";
 import { isPublicBindAddress, parseHost } from "./probe.js";
-import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
+import { addEvidence, finalize, runArea } from "./result.js";
 
 const EMPTY: SecurityData = {};
 
@@ -38,11 +38,13 @@ function maskSecret(_value: string): string {
   return "************";
 }
 
-function findLeaks(content: string, location: string): SecretLeak[] {
+function findLeaks(content: string, location: string, strict?: boolean): SecretLeak[] {
   const leaks: SecretLeak[] = [];
-  for (const { type, regex } of REDACTION_PATTERNS) {
-    // Re-use the pre-compiled regex — each pattern already has the global flag
-    const matcher = regex;
+  const patterns = strict
+    ? [...REDACTION_PATTERNS, ...STRICT_REDACTION_PATTERNS]
+    : REDACTION_PATTERNS;
+  for (const { type, regex } of patterns) {
+    const matcher = new RegExp(regex.source, regex.flags);
     let match: RegExpExecArray | null;
     while ((match = matcher.exec(content)) !== null) {
       leaks.push({
@@ -69,8 +71,7 @@ function findDynamicExec(content: string, location: string): DynamicExecBlock[] 
 export async function collectSecurity(
   ctx: CollectorContext,
 ): Promise<CollectorResult<SecurityData>> {
-  return runArea("security", EMPTY, ctx.redaction, async () => {
-    const acc = newAccumulator();
+  return runArea("security", EMPTY, ctx.redaction, async (acc) => {
     const config = await loadHermesConfig(ctx.paths.config);
     const security = asRecord(pick(config.parsed, "security"));
     const dashboard =
@@ -90,13 +91,13 @@ export async function collectSecurity(
     const dynamicExecBlocks: DynamicExecBlock[] = [];
 
     if (config.raw) {
-      secretLeaks.push(...findLeaks(config.raw, "config.yaml"));
+      secretLeaks.push(...findLeaks(config.raw, "config.yaml", ctx.strictRedaction));
       dynamicExecBlocks.push(...findDynamicExec(config.raw, "config.yaml"));
     }
 
     const envRead = await readTextFile(ctx.paths.envFile);
     if (envRead.ok && envRead.content) {
-      secretLeaks.push(...findLeaks(envRead.content, ".env"));
+      secretLeaks.push(...findLeaks(envRead.content, ".env", ctx.strictRedaction));
     }
 
     // Scan skill SKILL.md files for secrets
@@ -110,7 +111,7 @@ export async function collectSecurity(
       const absPath = path.join(ctx.paths.skillsDir, rel);
       const readResult = await readTextFile(absPath);
       if (readResult.ok && readResult.content) {
-        secretLeaks.push(...findLeaks(readResult.content, absPath));
+        secretLeaks.push(...findLeaks(readResult.content, absPath, ctx.strictRedaction));
       }
     }
 
@@ -125,20 +126,23 @@ export async function collectSecurity(
       const absPath = path.join(ctx.paths.pluginsDir, rel);
       const readResult = await readTextFile(absPath);
       if (readResult.ok && readResult.content) {
-        secretLeaks.push(...findLeaks(readResult.content, absPath));
+        secretLeaks.push(...findLeaks(readResult.content, absPath, ctx.strictRedaction));
       }
     }
 
     const envExposure = secretLeaks.some((leak) => leak.location === "config.yaml");
 
+    const checkPatterns = ctx.strictRedaction
+      ? [...REDACTION_PATTERNS, ...STRICT_REDACTION_PATTERNS]
+      : REDACTION_PATTERNS;
     const exposedVars = Object.entries(ctx.env)
       .filter(([, value]) =>
         typeof value === "string" &&
-        REDACTION_PATTERNS.some((p) => new RegExp(p.regex.source, p.regex.flags.replace("g", "")).test(value)),
+        checkPatterns.some((p) => new RegExp(p.regex.source, p.regex.flags.replace("g", "")).test(value)),
       )
       .map(([key]) => key);
 
-    const permissionIssues = await checkPermissions(ctx, secretLeaks);
+    const permissionIssues = await checkPermissions(ctx);
 
     if (secretLeaks.length > 0) {
       acc.warnings.push(`${secretLeaks.length} potential secret(s) detected in config/env`);
@@ -174,11 +178,9 @@ export async function collectSecurity(
 
 async function checkPermissions(
   ctx: CollectorContext,
-  secretLeaks: SecretLeak[],
 ): Promise<PermissionIssue[]> {
   if (os.platform() === "win32") return [];
   const issues: PermissionIssue[] = [];
-  const hasConfigSecret = secretLeaks.some((l) => l.location === "config.yaml");
 
   for (const file of SECRET_FILES) {
     const target = path.join(ctx.paths.home, file);
@@ -186,12 +188,8 @@ async function checkPermissions(
     if (!stat) continue;
     const mode = stat.mode & 0o777;
     const groupOrOther = mode & 0o077;
-    const isSensitive =
-      file === ".env" ||
-      file === "auth.json" ||
-      file === "credentials.json" ||
-      (file === "config.yaml" && hasConfigSecret);
-    if (isSensitive && groupOrOther !== 0) {
+    // Always check all sensitive files regardless of whether inline secrets were detected
+    if (groupOrOther !== 0) {
       issues.push({
         path: target,
         currentMode: mode.toString(8).padStart(3, "0"),

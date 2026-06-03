@@ -7,7 +7,7 @@ import {
   parseEnvFile,
   pick,
 } from "../utils/config.js";
-import { readTextFile, pathExists } from "../utils/fs.js";
+import { readTextFile } from "../utils/fs.js";
 import type { CollectorContext } from "./context.js";
 import type { ProviderData } from "./data.js";
 import { isLocalhostUrl, probeHttp } from "./probe.js";
@@ -362,26 +362,23 @@ export async function collectProviders(
     // 6. Parse auth.json (web UI authentication, separate from model providers)
     // -----------------------------------------------------------------------
     let authInfo: ProviderData["authInfo"] = null;
-    const authExists = await pathExists(ctx.paths.authFile);
-    if (authExists) {
-      const authRead = await readTextFile(ctx.paths.authFile);
-      if (authRead.ok && authRead.content) {
-        try {
-          const authParsed = JSON.parse(authRead.content) as Record<string, unknown>;
-          const activeProvider = asString(authParsed.active_provider) ?? null;
-          const hasSecrets = Object.keys(authParsed).some(
-            (k) => k !== "active_provider" && k !== "version",
-          );
-          authInfo = {
-            activeProvider,
-            hasSecrets: hasSecrets || undefined,
-          };
-          if (activeProvider) {
-            addEvidence(acc, "auth.json active_provider", activeProvider, "auth.json");
-          }
-        } catch {
-          acc.warnings.push("auth.json is malformed JSON");
+    const authRead = await readTextFile(ctx.paths.authFile);
+    if (authRead.ok && authRead.content) {
+      try {
+        const authParsed = JSON.parse(authRead.content) as Record<string, unknown>;
+        const activeProvider = asString(authParsed.active_provider) ?? null;
+        const hasSecrets = Object.keys(authParsed).some(
+          (k) => k !== "active_provider" && k !== "version",
+        );
+        authInfo = {
+          activeProvider,
+          hasSecrets: hasSecrets || undefined,
+        };
+        if (activeProvider) {
+          addEvidence(acc, "auth.json active_provider", activeProvider, "auth.json");
         }
+      } catch {
+        acc.warnings.push("auth.json is malformed JSON");
       }
     }
 

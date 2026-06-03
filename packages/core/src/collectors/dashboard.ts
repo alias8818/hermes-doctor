@@ -10,7 +10,7 @@ import {
 import type { CollectorContext } from "./context.js";
 import type { DashboardData } from "./data.js";
 import { isLocalhostUrl, parseHost, probeHttp } from "./probe.js";
-import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
+import { addEvidence, finalize, runArea } from "./result.js";
 
 const EMPTY: DashboardData = { probed: false };
 
@@ -66,8 +66,7 @@ function displayApiServerBinding(
 export async function collectDashboard(
   ctx: CollectorContext,
 ): Promise<CollectorResult<DashboardData>> {
-  return runArea("dashboard", EMPTY, ctx.redaction, async () => {
-    const acc = newAccumulator();
+  return runArea("dashboard", EMPTY, ctx.redaction, async (acc) => {
     const config = await loadHermesConfig(ctx.paths.config);
     const section = dashboardSection(config.parsed);
 

@@ -5,15 +5,14 @@ import { envForTrustedProbes } from "../utils/trusted-path.js";
 import { findExecutable } from "../utils/which.js";
 import type { CollectorContext } from "./context.js";
 import type { SystemData } from "./data.js";
-import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
+import { addEvidence, finalize, runArea } from "./result.js";
 
 const EMPTY: SystemData = {};
 
 export async function collectSystem(
   ctx: CollectorContext,
 ): Promise<CollectorResult<SystemData>> {
-  return runArea("system", EMPTY, ctx.redaction, async () => {
-    const acc = newAccumulator();
+  return runArea("system", EMPTY, ctx.redaction, async (acc) => {
     const info = getPlatformInfo(ctx.env);
 
     addEvidence(acc, "OS", `${info.os} (${info.arch})`);
