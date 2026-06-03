@@ -32,7 +32,11 @@ export interface ConsoleRenderOptions {
 // ---------------------------------------------------------------------------
 function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/\[[0-9;]*[A-Za-z]/g, "");
+  let result = text.replace(/\[[0-9;]*[A-Za-z]/g, "");
+  // Strip other control characters (keep \t, \n, \r, and printable chars)
+  // eslint-disable-next-line no-control-regex
+  result = result.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,17 +222,17 @@ export function renderConsole(report: DoctorReport, options: ConsoleRenderOption
         lines.push(`       ${pc.underline("Evidence:")}`);
         if (Array.isArray(evidenceData)) {
           for (const item of evidenceData as Array<Record<string, unknown>>) {
-            const label = stripAnsi(String(item.label ?? ""));
-            const detail = stripAnsi(String(item.detail ?? ""));
+            const label = stripAnsi(String(item.label ?? "")).replace(/\r/g, "");
+            const detail = stripAnsi(String(item.detail ?? "")).replace(/\r/g, "");
             const parts = [detail];
-            if (item.source) parts.push(`[source: ${String(item.source)}]`);
-            if (item.confidence) parts.push(`[confidence: ${String(item.confidence)}]`);
-            if (item.redacted !== undefined) parts.push(`[redacted: ${String(item.redacted)}]`);
+            if (item.source) parts.push(`[source: ${String(item.source).replace(/\r/g, "")}]`);
+            if (item.confidence) parts.push(`[confidence: ${String(item.confidence).replace(/\r/g, "")}]`);
+            if (item.redacted !== undefined) parts.push(`[redacted: ${String(item.redacted).replace(/\r/g, "")}]`);
             lines.push(`         ${label}: ${parts.join(" ")}`);
           }
         } else {
           for (const [key, value] of evidenceEntries as Array<[string, unknown]>) {
-            const display = typeof value === "string" ? stripAnsi(value) : JSON.stringify(value);
+            const display = typeof value === "string" ? stripAnsi(value).replace(/\r/g, "") : JSON.stringify(value);
             lines.push(`         ${key}: ${display}`);
           }
         }

@@ -817,3 +817,97 @@ describe.skip("Threshold flag validation", () => {
     expect(parsed.summary).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #38: export --format console
+// ---------------------------------------------------------------------------
+
+describe("Issue #38: export --format console", () => {
+  it("renders console output via export command", async () => {
+    const fixturePath = resolve(fixturesDir, "hermes-good");
+    const outDir = tmpDir();
+
+    // Run a scan first
+    const scanResult = await runCli([
+      "scan",
+      "--hermes-home", fixturePath,
+      "--format", "json",
+      "--output", outDir,
+    ]);
+    expect(scanResult.exitCode).toBe(0);
+
+    // Now export as console
+    const exportResult = await runCli([
+      "export",
+      "--last",
+      "--format", "console",
+      "--output", outDir,
+    ]);
+
+    expect(exportResult.exitCode).toBe(0);
+    expect(exportResult.stdout).toContain("Hermes Doctor");
+    expect(exportResult.stdout).toContain("Summary");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #49: --profile validation
+// ---------------------------------------------------------------------------
+
+describe("Issue #49: --profile validation", () => {
+  it("rejects profile name longer than 128 characters", async () => {
+    const fixturePath = resolve(fixturesDir, "hermes-good");
+    const longName = "a".repeat(129);
+
+    const result = await runCli([
+      "scan",
+      "--hermes-home", fixturePath,
+      "--profile", longName,
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("128 characters");
+  });
+
+  it("rejects profile name with invalid characters", async () => {
+    const fixturePath = resolve(fixturesDir, "hermes-good");
+
+    const result = await runCli([
+      "scan",
+      "--hermes-home", fixturePath,
+      "--profile", "my profile!",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("alphanumeric");
+  });
+
+  it("accepts valid profile name", async () => {
+    const fixturePath = resolve(fixturesDir, "hermes-good");
+
+    const result = await runCli([
+      "scan",
+      "--hermes-home", fixturePath,
+      "--profile", "my-work-profile",
+    ]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Summary");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #65: paths command validation consistency
+// ---------------------------------------------------------------------------
+
+describe("Issue #65: paths command validation", () => {
+  it("rejects nonexistent --hermes-home path like scan command", async () => {
+    const badPath = join(os.tmpdir(), `hermes-doctor-nonexistent-paths-${Date.now()}`);
+    const result = await runCli([
+      "paths",
+      "--hermes-home", badPath,
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Error");
+    expect(result.stderr).toContain(badPath);
+    expect(result.stderr).not.toMatch(STACK_TRACE_RE);
+  });
+});

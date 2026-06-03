@@ -17,6 +17,31 @@ export function registerPathsCommand(program: Command): void {
     .option("--profile <name>", "Hermes profile to scan")
     .action((options: PathsOptions) => {
       const home = resolveHermesHome({ hermesHome: options.hermesHome });
+
+      // If --hermes-home was explicitly provided, validate the path like scan command (issue #65)
+      if (options.hermesHome !== undefined) {
+        try {
+          fs.accessSync(home, fs.constants.F_OK);
+        } catch {
+          process.stderr.write(
+            `Error: Hermes home path does not exist: ${home}
+`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+        try {
+          fs.accessSync(home, fs.constants.R_OK);
+        } catch {
+          process.stderr.write(
+            `Error: Hermes home path is not readable: ${home}
+`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+      }
+
       const profile = options.profile ?? process.env.HERMES_PROFILE ?? "default";
       const hp = hermesPaths(home);
 

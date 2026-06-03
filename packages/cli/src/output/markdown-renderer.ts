@@ -171,12 +171,12 @@ export function renderMarkdown(report: DoctorReport): string {
           lines.push("**Evidence:**");
           lines.push("");
           for (const item of evidenceData as Array<Record<string, unknown>>) {
-            const label = String(item.label ?? "");
-            const detail = String(item.detail ?? "");
+            const label = String(item.label ?? "").replace(/\r/g, "");
+            const detail = String(item.detail ?? "").replace(/\r/g, "");
             const parts = [escapeMd(detail)];
-            if (item.source) parts.push(`[source: ${String(item.source)}]`);
-            if (item.confidence) parts.push(`[confidence: ${String(item.confidence)}]`);
-            if (item.redacted !== undefined) parts.push(`[redacted: ${String(item.redacted)}]`);
+            if (item.source) parts.push(`[source: ${String(item.source).replace(/\r/g, "")}]`);
+            if (item.confidence) parts.push(`[confidence: ${String(item.confidence).replace(/\r/g, "")}]`);
+            if (item.redacted !== undefined) parts.push(`[redacted: ${String(item.redacted).replace(/\r/g, "")}]`);
             lines.push(`- ${code(label)}: ${parts.join(" ")}`);
           }
           lines.push("");
@@ -187,7 +187,7 @@ export function renderMarkdown(report: DoctorReport): string {
           lines.push("**Evidence:**");
           lines.push("");
           for (const [key, value] of evidenceEntries) {
-            const display = typeof value === "string" ? value : JSON.stringify(value);
+            const display = typeof value === "string" ? value.replace(/\r/g, "") : JSON.stringify(value);
             lines.push(`- ${code(key)}: ${escapeMd(display)}`);
           }
           lines.push("");

@@ -9,6 +9,7 @@ import {
   buildSnapshot,
   DeterministicWorkflowRunner,
   type WorkflowRunner,
+  type Thresholds,
 } from "@hermes-doctor/core";
 
 import { renderConsole } from "../output/console-renderer.js";
@@ -27,6 +28,15 @@ interface ScanOptions {
   includeLogSnippets?: boolean;
   maxLogLines?: string;
   strictRedaction?: boolean;
+  // Threshold and timeout options (stored as strings by Commander)
+  memoryWarnPercent?: string;
+  memoryCriticalPercent?: string;
+  hugeFileThreshold?: string;
+  largeFileThreshold?: string;
+  crashLoopErrorThreshold?: string;
+  crashLoopRecentErrors?: string;
+  skillsLargeFileThreshold?: string;
+  dashboardTimeout?: string;
 }
 
 export interface ResolvedHermesHome {
@@ -80,6 +90,36 @@ function shouldEnableFlue(options: ScanOptions): boolean {
   }
   // Default
   return false;
+}
+
+/**
+ * Parse a numeric CLI option with validation.
+ *
+ * Returns the parsed number, or writes an error to stderr and returns null.
+ * When `allowNegative` is false (default), non-negative values are required.
+ */
+function parseNumericOption(
+  value: string | undefined,
+  optionName: string,
+  allowNegative = false,
+): number | null {
+  if (value === undefined) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    process.stderr.write(
+      `Error: --${optionName} must be a number, got '${value}'\n`,
+    );
+    process.exitCode = 1;
+    return null;
+  }
+  if (!allowNegative && parsed < 0) {
+    process.stderr.write(
+      `Error: --${optionName} must be a non-negative number, got ${parsed}\n`,
+    );
+    process.exitCode = 1;
+    return null;
+  }
+  return parsed;
 }
 
 /**
@@ -155,6 +195,39 @@ export function registerScanCommand(program: Command): void {
       "Enable extra-aggressive redaction patterns (base64, env values, etc.)",
       false,
     )
+    // Threshold and timeout options
+    .option(
+      "--huge-file-threshold <mb>",
+      "Threshold in MB above which a memory file is considered huge (default: 100)",
+    )
+    .option(
+      "--large-file-threshold <kb>",
+      "Threshold in KB above which a memory file is marked large (default: 256)",
+    )
+    .option(
+      "--memory-warn-threshold <percent>",
+      "Memory usage warning threshold in percent (default: 80)",
+    )
+    .option(
+      "--memory-critical-threshold <percent>",
+      "Memory usage critical threshold in percent (default: 100)",
+    )
+    .option(
+      "--crash-loop-error-threshold <count>",
+      "Total error count threshold for crash loop detection (default: 50)",
+    )
+    .option(
+      "--crash-loop-recent-errors <count>",
+      "Recent error count threshold for crash loop detection (default: 20)",
+    )
+    .option(
+      "--skills-large-file-threshold <kb>",
+      "File size threshold in KB for flagging large SKILL.md files (default: 512)",
+    )
+    .option(
+      "--dashboard-timeout <ms>",
+      "Dashboard connectivity probe timeout in milliseconds (default: 1500)",
+    )
     .action(async (options: ScanOptions) => {
       try {
         await executeScan(options);
@@ -196,9 +269,76 @@ async function executeScan(options: ScanOptions): Promise<void> {
       return;
     }
   }
+
+  // Validate --profile name (issue #49)
+  if (profile.length > 128) {
+    process.stderr.write(
+      `Error: --profile name must be at most 128 characters, got ${profile.length}\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(profile)) {
+    process.stderr.write(
+      `Error: --profile name must contain only alphanumeric characters, hyphens, and underscores, got '${profile}'\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
   const rawFormats = Array.isArray(options.format) ? options.format : [options.format ?? "console"];
   // Use explicit formats if any provided, otherwise default to console
   const formats = rawFormats.length > 0 ? rawFormats : ["console"];
+
+  // Validate all format flags before any processing (issue #55)
+  const validFormats = new Set(["console", "markdown", "json"]);
+  for (const format of formats) {
+    if (!validFormats.has(format)) {
+      process.stderr.write(
+        `Error: Unknown format: '${format}'. Valid formats: console, markdown, json\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Check that --output path does not point to an existing file (issue #45)
+  const outputDir = options.output;
+  if (outputDir) {
+    try {
+      const stat = fs.statSync(outputDir);
+      if (stat.isFile()) {
+        process.stderr.write(
+          `Error: --output path '${outputDir}' is an existing file, not a directory.\n`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+    } catch {
+      // Path does not exist — will be created by mkdir
+    }
+  }
+
+  // Warn if multiple formats without --output (issue #29)
+  if (!outputDir && formats.length > 1) {
+    process.stderr.write(
+      `Warning: Multiple --format flags specified without --output. ` +
+      `Only the first format ("${formats[0]}") will be written to stdout. ` +
+      `Use --output <dir> to write all formats to files.\n`,
+    );
+  }
+
+  // Warn if --output is used without explicit --format (issue #63)
+  const userExplicitlySetFormat = Array.isArray(options.format) && options.format.length > 0;
+  if (outputDir && !userExplicitlySetFormat) {
+    process.stderr.write(
+      `Warning: --output specified without --format. ` +
+      `Defaulting to console output on stdout. ` +
+      `Use --format markdown or --format json to write files to the output directory.\n`,
+    );
+  }
+
+  // Without --output, only one format can go to stdout
+  const formatsToRender = (!outputDir && formats.length > 1) ? [formats[0]] : formats;
 
   // Determine Flue mode
   const flueEnabled = shouldEnableFlue(options);
@@ -224,6 +364,50 @@ async function executeScan(options: ScanOptions): Promise<void> {
     maxLogLines = parsed;
   }
 
+  // Parse threshold options with validation
+  const hugeFileThreshold = parseNumericOption(options.hugeFileThreshold, "huge-file-threshold");
+  if (process.exitCode === 1) return;
+
+  const largeFileThreshold = parseNumericOption(options.largeFileThreshold, "large-file-threshold");
+  if (process.exitCode === 1) return;
+
+  const memoryWarnPercent = parseNumericOption(options.memoryWarnPercent, "memory-warn-threshold");
+  if (process.exitCode === 1) return;
+
+  const memoryCriticalPercent = parseNumericOption(options.memoryCriticalPercent, "memory-critical-threshold");
+  if (process.exitCode === 1) return;
+
+  const crashLoopErrorThreshold = parseNumericOption(
+    options.crashLoopErrorThreshold,
+    "crash-loop-error-threshold",
+  );
+  if (process.exitCode === 1) return;
+
+  const crashLoopRecentErrors = parseNumericOption(
+    options.crashLoopRecentErrors,
+    "crash-loop-recent-errors",
+  );
+  if (process.exitCode === 1) return;
+
+  const skillsLargeFileThreshold = parseNumericOption(
+    options.skillsLargeFileThreshold,
+    "skills-large-file-threshold",
+  );
+  if (process.exitCode === 1) return;
+
+  const dashboardTimeout = parseNumericOption(options.dashboardTimeout, "dashboard-timeout");
+  if (process.exitCode === 1) return;
+
+  // Build threshold overrides from parsed CLI options
+  const thresholds: Partial<Thresholds> = {};
+  if (memoryWarnPercent !== null) thresholds.memoryWarnPercent = memoryWarnPercent;
+  if (memoryCriticalPercent !== null) thresholds.memoryCriticalPercent = memoryCriticalPercent;
+  if (hugeFileThreshold !== null) thresholds.hugeFileBytes = hugeFileThreshold * 1024 * 1024;
+  if (largeFileThreshold !== null) thresholds.largeFileBytes = largeFileThreshold * 1024;
+  if (crashLoopErrorThreshold !== null) thresholds.crashLoopErrorCount = crashLoopErrorThreshold;
+  if (crashLoopRecentErrors !== null) thresholds.crashLoopRecentErrors = crashLoopRecentErrors;
+  if (skillsLargeFileThreshold !== null) thresholds.skillsLargeFileBytes = skillsLargeFileThreshold * 1024;
+
   // Step 1: Run all collectors with all options
   const collectorResults = await collectAll({
     hermesHome: hermesHome.path,
@@ -231,6 +415,8 @@ async function executeScan(options: ScanOptions): Promise<void> {
     includeLogSnippets: options.includeLogSnippets ?? false,
     maxLogLines,
     strictRedaction: options.strictRedaction ?? false,
+    thresholds: Object.keys(thresholds).length > 0 ? thresholds : undefined,
+    dashboardTimeoutMs: dashboardTimeout ?? undefined,
   });
 
   // Step 2: Build snapshot
@@ -244,19 +430,14 @@ async function executeScan(options: ScanOptions): Promise<void> {
   const report = await runner.runDoctor(snapshot);
 
   // Step 4: Render output
-  const outputDir = options.output;
 
-  // Track whether we wrote to stdout already
-  let wroteConsole = false;
-
-  for (const format of formats) {
+  for (const format of formatsToRender) {
     switch (format) {
       case "console": {
         const output = renderConsole(report, {
           verbose: options.verbose ?? false,
         });
         process.stdout.write(output);
-        wroteConsole = true;
         break;
       }
       case "markdown": {
@@ -268,9 +449,8 @@ async function executeScan(options: ScanOptions): Promise<void> {
           const filePath = path.join(outputDir, "hermes-doctor-report.md");
           fs.writeFileSync(filePath, output, "utf-8");
           process.stdout.write(`Markdown report written to ${filePath}\n`);
-        } else if (!wroteConsole) {
+        } else {
           process.stdout.write(output);
-          wroteConsole = true;
         }
         break;
       }
@@ -285,16 +465,11 @@ async function executeScan(options: ScanOptions): Promise<void> {
           const filePath = path.join(outputDir, "hermes-doctor-report.json");
           fs.writeFileSync(filePath, output, "utf-8");
           process.stdout.write(`JSON report written to ${filePath}\n`);
-        } else if (!wroteConsole) {
+        } else {
           process.stdout.write(output);
-          wroteConsole = true;
         }
         break;
       }
-      default:
-        process.stderr.write(`Unknown format: ${format}. Valid formats: console, markdown, json\n`);
-        process.exitCode = 1;
-        return;
     }
   }
 }

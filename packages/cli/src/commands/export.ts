@@ -3,6 +3,7 @@ import * as path from "node:path";
 
 import type { Command } from "commander";
 
+import { renderConsole } from "../output/console-renderer.js";
 import { renderMarkdown } from "../output/markdown-renderer.js";
 import { renderJson } from "../output/json-renderer.js";
 
@@ -24,7 +25,7 @@ export function registerExportCommand(program: Command): void {
     .command("export")
     .description("Export the most recent scan report")
     .option("--last", "Export the most recent scan report")
-    .option("--format <format>", "Output format (markdown, json)")
+    .option("--format <format>", "Output format (console, markdown, json)")
     .option("--output <dir>", "Directory where the last report was stored")
     .action(async (options: ExportOptions) => {
       try {
@@ -50,7 +51,7 @@ async function executeExport(options: ExportOptions): Promise<void> {
   const outputDir = options.output ?? defaultOutputDir();
   const format = options.format ?? "markdown";
 
-  if (format !== "markdown" && format !== "json") {
+  if (format !== "console" && format !== "markdown" && format !== "json") {
     process.stderr.write(
       `Error: Unsupported format '${format}'. Use 'markdown' or 'json'.\n`,
     );
@@ -71,6 +72,12 @@ async function executeExport(options: ExportOptions): Promise<void> {
 
   const jsonContent = fs.readFileSync(jsonReport, "utf-8");
   const report = JSON.parse(jsonContent);
+
+  if (format === "console") {
+    process.stdout.write(renderConsole(report));
+    return;
+  }
+
 
   if (format === "json") {
     // Re-render from JSON to apply redaction defense-in-depth
@@ -95,5 +102,19 @@ function findLastReportOfType(dir: string, ext: string): string | null {
     const bTime = fs.statSync(path.join(dir, b)).mtimeMs;
     return bTime - aTime;
   });
-  return path.join(dir, matches[0]!);
+
+  // Validate the found file: ensure it is non-empty and parseable
+  const candidate = path.join(dir, matches[0]!);
+  try {
+    const content = fs.readFileSync(candidate, "utf-8");
+    if (content.trim().length === 0) return null;
+    // For JSON reports, validate parseability
+    if (ext === ".json") {
+      JSON.parse(content);
+    }
+  } catch {
+    return null;
+  }
+
+  return candidate;
 }
