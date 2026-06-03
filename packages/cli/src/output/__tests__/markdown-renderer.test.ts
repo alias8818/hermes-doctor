@@ -219,7 +219,7 @@ describe("markdown renderer", () => {
     };
     const output = renderMarkdown(reportWithFlue as unknown as ReturnType<typeof buildReport>);
     expect(output).toContain("## Flue Insights (experimental)");
-    expect(output).toContain("test-finding");
+    expect(output).toContain("test\-finding");
     expect(output).toContain("This is a markdown insight");
   });
 
