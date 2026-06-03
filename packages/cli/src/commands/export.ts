@@ -7,34 +7,6 @@ import { renderMarkdown } from "../output/markdown-renderer.js";
 import { renderJson } from "../output/json-renderer.js";
 
 /**
- * Find the most recent scan report in the output directory.
- * Reports are named hermes-doctor-report.json or hermes-doctor-report.md.
- */
-function findLastReport(outputDir: string): string | null {
-  if (!fs.existsSync(outputDir)) {
-    return null;
-  }
-
-  const entries = fs.readdirSync(outputDir);
-  const reportFiles = entries.filter(
-    (f) => f.startsWith("hermes-doctor-report") && (f.endsWith(".json") || f.endsWith(".md")),
-  );
-
-  if (reportFiles.length === 0) {
-    return null;
-  }
-
-  // Sort by mtime, newest first
-  reportFiles.sort((a, b) => {
-    const aTime = fs.statSync(path.join(outputDir, a)).mtimeMs;
-    const bTime = fs.statSync(path.join(outputDir, b)).mtimeMs;
-    return bTime - aTime;
-  });
-
-  return path.join(outputDir, reportFiles[0]!);
-}
-
-/**
  * Default output directory for scan reports.
  */
 function defaultOutputDir(): string {
