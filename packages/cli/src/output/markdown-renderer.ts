@@ -84,7 +84,7 @@ function stripAnsi(text: string): string {
 }
 
 function code(text: string): string {
-  return "`" + text.replace(/`/g, "\\`") + "`";
+  return "`" + text.replace(/\\/g, "\\\\").replace(/`/g, "\\`") + "`";
 }
 
 // ---------------------------------------------------------------------------
