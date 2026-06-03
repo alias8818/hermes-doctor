@@ -33,15 +33,16 @@ const DYNAMIC_EXEC_PATTERNS: Array<{ label: string; pattern: RegExp; risk: strin
   { label: "exec", pattern: /\b(?:os\.system|subprocess|child_process|exec(?:Sync)?)\b/, risk: "medium" },
 ];
 
-function maskSecret(value: string): string {
-  const length = Math.min(12, Math.max(6, value.length));
-  return "*".repeat(length);
+function maskSecret(_value: string): string {
+  // Always produce a fixed-length mask to avoid leaking secret length
+  return "************";
 }
 
 function findLeaks(content: string, location: string): SecretLeak[] {
   const leaks: SecretLeak[] = [];
   for (const { type, regex } of REDACTION_PATTERNS) {
-    const matcher = new RegExp(regex.source, regex.flags);
+    // Re-use the pre-compiled regex — each pattern already has the global flag
+    const matcher = regex;
     let match: RegExpExecArray | null;
     while ((match = matcher.exec(content)) !== null) {
       leaks.push({
