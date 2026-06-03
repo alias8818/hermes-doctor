@@ -125,7 +125,8 @@ export const localhostBindingCheck: Check = {
       ];
     }
 
-    if (dash.bindAddress && dash.bindAddress === "0.0.0.0") {
+    // 0.0.0.0 (IPv4 any) and :: (IPv6 any) both expose the dashboard to the network
+    if (dash.bindAddress && (dash.bindAddress === "0.0.0.0" || dash.bindAddress === "::")) {
       return [
         finding(
           "dashboard-localhost-binding",

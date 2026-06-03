@@ -98,8 +98,18 @@ export function buildSnapshot(
     redaction,
   };
 
-  // Validate against the schema
-  return v.parse(HermesSnapshotSchema, snapshot);
+  // Validate against the schema — on failure, return the unvalidated snapshot
+  // with a warning instead of crashing, preserving all collected data.
+  try {
+    return v.parse(HermesSnapshotSchema, snapshot);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    snapshot.collectionWarnings = [
+      ...(snapshot.collectionWarnings ?? []),
+      `Schema validation failed: ${message}`,
+    ];
+    return snapshot;
+  }
 }
 
 /**

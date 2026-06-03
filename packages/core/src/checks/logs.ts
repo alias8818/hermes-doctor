@@ -56,7 +56,9 @@ export const recentErrorsCheck: Check = {
     // Determine if it's a crash loop (many errors in a short time)
     const crashErrorThreshold = snapshot.thresholds?.crashLoopErrorCount ?? 50;
     const crashRecentThreshold = snapshot.thresholds?.crashLoopRecentErrors ?? 20;
-    const isCrashLoop = errorCount > crashErrorThreshold || recentErrors.length > crashRecentThreshold;
+    // Both thresholds must be exceeded — a system with many historical errors
+    // but few recent ones is not crash-looping, and vice versa.
+    const isCrashLoop = errorCount > crashErrorThreshold && recentErrors.length > crashRecentThreshold;
 
     return [
       finding(

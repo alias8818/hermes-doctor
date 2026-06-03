@@ -1278,8 +1278,9 @@ describe("threshold configurability (VAL-THRESHOLD)", () => {
   });
 
   it("logs-recent-errors: uses custom crash loop error threshold", () => {
-    // Default crashLoopErrorCount is 50 — with 40 errors it would NOT be a crash loop.
-    // With custom threshold of 30, 40 errors SHOULD flag as crash loop.
+    // With AND logic, both error count AND recent errors must exceed their thresholds.
+    // Custom crashLoopErrorCount of 30 + crashLoopRecentErrors of 3:
+    // 40 errors > 30 AND 5 recent > 3 → crash loop.
     const snap = minimalSnapshot({
       logs: {
         status: "collected",
@@ -1287,17 +1288,17 @@ describe("threshold configurability (VAL-THRESHOLD)", () => {
         errors: [],
         logFile: "/home/.hermes/logs/hermes.log",
         errorCount: 40,
-        recentErrors: [
-          { timestamp: "2026-06-01T10:00:00Z", message: "error 1" },
-          { timestamp: "2026-06-01T10:01:00Z", message: "error 2" },
-        ],
+        recentErrors: Array.from({ length: 5 }, (_, i) => ({
+          timestamp: `2026-06-01T10:0${i}:00Z`,
+          message: `error ${i + 1}`,
+        })),
       },
       thresholds: {
         memoryWarnPercent: 80,
         memoryCriticalPercent: 100,
         hugeFileBytes: 104857600,
         crashLoopErrorCount: 30,
-        crashLoopRecentErrors: 20,
+        crashLoopRecentErrors: 3,
         largeFileBytes: 262144,
         skillsLargeFileBytes: 524288,
       },
@@ -1309,8 +1310,8 @@ describe("threshold configurability (VAL-THRESHOLD)", () => {
   });
 
   it("logs-recent-errors: uses custom crash loop recent threshold", () => {
-    // Default crashLoopRecentErrors is 20 — with 10 recent errors it would NOT be crash loop.
-    // With custom threshold of 5, 10 recent errors SHOULD flag as crash loop.
+    // With AND logic, both conditions must be met. Custom crashLoopRecentErrors of 5
+    // and crashLoopErrorCount of 8: 10 errors > 8 AND 10 recent > 5 → crash loop.
     const snap = minimalSnapshot({
       logs: {
         status: "collected",
@@ -1327,7 +1328,7 @@ describe("threshold configurability (VAL-THRESHOLD)", () => {
         memoryWarnPercent: 80,
         memoryCriticalPercent: 100,
         hugeFileBytes: 104857600,
-        crashLoopErrorCount: 50,
+        crashLoopErrorCount: 8,
         crashLoopRecentErrors: 5,
         largeFileBytes: 262144,
         skillsLargeFileBytes: 524288,

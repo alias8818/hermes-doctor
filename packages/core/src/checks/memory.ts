@@ -362,7 +362,7 @@ export const memorySecretsCheck: Check = {
         secrets.map((s) => ({
           file: s.file,
           secret_type: s.secretType,
-          masked: `[REDACTED:${s.secretType.toUpperCase()}]`,
+          masked: `[REDACTED:${(s.secretType ?? "unknown").toUpperCase()}]`,
         })),
       ), "file", "medium", true),
     ];
