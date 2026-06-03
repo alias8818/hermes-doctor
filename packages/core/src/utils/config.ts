@@ -114,10 +114,11 @@ export function parseEnvFile(content: string): Record<string, string> {
     }
 
     if (!isSingleQuoted) {
-      value = value.replace(/\$\{([^}]+)\}/g, (_match: string, varName: string): string => {
+      // Bounded length to prevent ReDoS via crafted env files with runaway brace patterns
+      value = value.replace(/\$\{([^}]{1,200})\}/g, (_match: string, varName: string): string => {
         return result[varName] !== undefined ? result[varName] : process.env[varName] ?? "";
       });
-      value = value.replace(/\$([a-zA-Z_]\w*)/g, (_match: string, varName: string): string => {
+      value = value.replace(/\$([a-zA-Z_]\w{0,200})/g, (_match: string, varName: string): string => {
         return result[varName] !== undefined ? result[varName] : process.env[varName] ?? "";
       });
     }
