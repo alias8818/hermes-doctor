@@ -307,8 +307,8 @@ describe("[VAL-MEM-007] Memory near or over size limit", () => {
       (f: Finding) => f.id === "memory-limit",
     );
     expect(limitFinding).toBeDefined();
-    expect(limitFinding.status).toBe("warning");
-    expect(limitFinding.severity).toBe(2);
+    expect(limitFinding.status).toBe("risk");
+    expect(limitFinding.severity).toBe(3);
     const usagePct = findEvidence(limitFinding.evidence, "usage_percent");
     expect(usagePct).toBeDefined();
     expect(parseFloat(usagePct!)).toBeGreaterThanOrEqual(100);
@@ -769,7 +769,7 @@ describe("No crash or hang on large file scanning", () => {
       (f: Finding) => f.id === "memory-limit",
     );
     expect(limitFinding).toBeDefined();
-    expect(limitFinding.status).toBe("warning");
+    expect(limitFinding.status).toBe("risk");
   });
 });
 

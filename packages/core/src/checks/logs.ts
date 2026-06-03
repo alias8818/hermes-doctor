@@ -137,7 +137,7 @@ export const errorClassificationCheck: Check = {
       finding(
         "logs-error-classification",
         "logs",
-        totalByType > 0 ? "warning" : "ok",
+        "warning",
         1,
         "Error Classification",
         `${totalByType} error(s) classified: ${typeEntries.join(", ")}`,

@@ -111,7 +111,8 @@ export const pluginManifestsCheck: Check = {
     ];
 
     const withManifests = pluginEntries.filter((p) => p.manifestFound);
-    const invalidManifests = withManifests.filter((p) => !p.manifestValid);
+    // Use explicit false check — undefined means manifest wasn't probed, not invalid
+    const invalidManifests = withManifests.filter((p) => p.manifestValid === false);
 
     if (invalidManifests.length === 0) {
       if (withManifests.length === 0) {

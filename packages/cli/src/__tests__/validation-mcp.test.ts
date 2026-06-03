@@ -325,10 +325,11 @@ describe("VAL-MCP: MCP Failures", () => {
     // Misnested-key sub-test
     const misnestedFp = resolve(mcpFixturesDir, "misnested-key");
 
-    it("misnested mcp key (server vs servers) produces a config warning", async () => {
+    it("misnested mcp key (server vs servers) produces at least one config finding", async () => {
       const r = await scanWithEnv(misnestedFp, env);
       expect(r.exitCode).toBe(0);
-      const configF = JSON.parse(r.stdout).findings.filter((f: Finding) => f.area === "config" && f.status === "warning");
+      // Optional sections (skills, plugins) produce "info" not "warning"
+      const configF = JSON.parse(r.stdout).findings.filter((f: Finding) => f.area === "config" && (f.status === "warning" || f.status === "info"));
       expect(configF.length).toBeGreaterThanOrEqual(1);
     });
 

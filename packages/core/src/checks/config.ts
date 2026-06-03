@@ -218,18 +218,43 @@ export const sectionsCheck: Check = {
       evidence("sections", JSON.stringify(sections), "config"),
     ];
 
-    const requiredSections = ["providers", "skills", "plugins"];
-    const missing = requiredSections.filter((s) => sections[s] !== true);
+    const requiredSections = ["providers"];
+    const optionalSections = ["skills", "plugins"];
 
-    if (missing.length === 0) {
+    const missing = requiredSections.filter((s) => sections[s] !== true);
+    const missingOptional = optionalSections.filter((s) => sections[s] !== true);
+
+    // Missing required sections: warning
+    if (missing.length > 0) {
       return [
         finding(
           "config-sections",
           "config",
-          "ok",
+          "warning",
+          1,
+          "Missing Configuration Sections",
+          `Missing required section(s): ${missing.join(", ")}`,
+          ev,
+          [
+            fix(`Add ${missing[0]} section to config.yaml`, {
+              command: `echo "${safeIdentifier(missing[0] ?? "section", "section")}: {}" >> ~/.hermes/config.yaml`,
+              risk: "low",
+            }),
+          ],
+        ),
+      ];
+    }
+
+    // Missing optional sections: info (not a warning — they're optional)
+    if (missingOptional.length > 0) {
+      return [
+        finding(
+          "config-sections",
+          "config",
+          "info",
           0,
-          "All Required Sections Present",
-          "config.yaml contains all required top-level sections",
+          "Optional Sections Not Configured",
+          `Optional section(s) not found: ${missingOptional.join(", ")}. These are not required but recommended for full functionality.`,
           ev,
         ),
       ];
@@ -239,19 +264,11 @@ export const sectionsCheck: Check = {
       finding(
         "config-sections",
         "config",
-        "warning",
-        1,
-        "Missing Configuration Sections",
-        `Missing sections: ${missing.join(", ")}`,
+        "ok",
+        0,
+        "All Required Sections Present",
+        "config.yaml contains all required top-level sections",
         ev,
-        missing.length > 0
-          ? [
-              fix(`Add ${missing[0]} section to config.yaml`, {
-                command: `echo "${safeIdentifier(missing[0] ?? "section", "section")}: {}" >> ~/.hermes/config.yaml`,
-                risk: "low",
-              }),
-            ]
-          : [],
       ),
     ];
   },

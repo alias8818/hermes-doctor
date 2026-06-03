@@ -223,8 +223,8 @@ export const memoryLimitCheck: Check = {
         finding(
           "memory-limit",
           "memory",
-          "warning",
-          2,
+          "risk",
+          3,
           "Memory Limit Exceeded",
           `Memory usage (${formatSize(totalSize)}) exceeds limit (${formatSize(limit)}) — ${usagePercent.toFixed(1)}%`,
           ev,

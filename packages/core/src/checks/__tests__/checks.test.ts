@@ -1095,8 +1095,8 @@ describe("memory checks", () => {
       },
     });
     const findings = memoryChecks[2]!.run(snap);
-    expect(first(findings).status).toBe("warning");
-    expect(first(findings).severity).toBe(2);
+    expect(first(findings).status).toBe("risk");
+    expect(first(findings).severity).toBe(3);
   });
 
   it("memory-limit: warning when near limit", () => {
@@ -1172,8 +1172,8 @@ describe("memory checks", () => {
       },
     });
     const findings = memoryChecks[2]!.run(snap);
-    expect(first(findings).status).toBe("warning");
-    expect(first(findings).severity).toBe(2);
+    expect(first(findings).status).toBe("risk");
+    expect(first(findings).severity).toBe(3);
     expect(first(findings).title).toBe("Memory Limit Exceeded");
   });
 
