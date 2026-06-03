@@ -173,21 +173,6 @@ function scanRedactionMarkers(value: unknown): RedactionSummary {
       for (const item of node) {
         walk(item);
       }
-    } else if (node instanceof Map) {
-      if (visited.has(node)) return;
-      visited.add(node);
-      for (const value of node.values()) {
-        walk(value);
-      }
-    } else if (node instanceof Set) {
-      if (visited.has(node)) return;
-      visited.add(node);
-      for (const value of node) {
-        walk(value);
-      }
-    } else if (node instanceof Date || (typeof Buffer !== "undefined" && Buffer.isBuffer(node))) {
-      // String leaves — nothing to recurse into
-      return;
     } else if (node !== null && typeof node === "object") {
       if (visited.has(node)) return;
       visited.add(node);

@@ -300,54 +300,6 @@ describe("redactDeep()", () => {
     expect(redactDeep(undefined).value).toBeUndefined();
     expect(redactDeep(42).value).toBe(42);
   });
-
-  it("converts Date to ISO string without redaction", () => {
-    const d = new Date("2026-01-15T10:30:00.000Z");
-    const { value } = redactDeep(d);
-    expect(value).toBe("2026-01-15T10:30:00.000Z");
-  });
-
-  it("walks Map values and redacts strings in them", () => {
-    const m = new Map<string, unknown>([
-      ["api_key", "sk-1234567890abcdef1234567890abcdef1234567890abcdef"],
-      ["count", 42],
-    ]);
-    const { value, summary } = redactDeep(m);
-    const out = value as Record<string, unknown>;
-    expect(out.api_key).toBe("[REDACTED:OPENAI_KEY]");
-    expect(out.count).toBe(42);
-    expect(summary.totalRedactions).toBe(1);
-  });
-
-  it("walks Set values and redacts strings in them", () => {
-    const s = new Set(["safe", "ghp_abcdefghijklmnopqrstuvwxyz0123456789"]);
-    const { value, summary } = redactDeep(s);
-    const out = value as unknown[];
-    expect(out[0]).toBe("safe");
-    expect(out[1]).toBe("[REDACTED:GITHUB_TOKEN]");
-    expect(summary.totalRedactions).toBe(1);
-  });
-
-  it("converts Buffer to hex string without redaction", () => {
-    const buf = Buffer.from("hello");
-    const { value } = redactDeep(buf);
-    expect(value).toBe("68656c6c6f");
-  });
-
-  it("handles nested objects containing Map/Set/Date/Buffer", () => {
-    const input = {
-      title: "config",
-      metadata: new Map([["created", new Date("2026-01-01T00:00:00.000Z")]]),
-      tags: new Set(["alpha", "beta"]),
-      data: Buffer.from("secret"),
-    };
-    const { value } = redactDeep(input);
-    const out = value as Record<string, unknown>;
-    expect(out.title).toBe("config");
-    expect((out.metadata as Record<string, unknown>).created).toBe("2026-01-01T00:00:00.000Z");
-    expect(out.tags).toEqual(["alpha", "beta"]);
-    expect(out.data).toBe("736563726574");
-  });
 });
 
 describe("summary helpers", () => {

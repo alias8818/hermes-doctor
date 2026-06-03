@@ -3,7 +3,7 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 import type { CollectorResult } from "../schemas/collector.js";
 import { asRecord, asString, loadHermesConfig, pick, resolveSubpath } from "../utils/config.js";
-import { listDir, readTextFile, statSafe } from "../utils/fs.js";
+import { listDir, pathExists, readTextFile, statSafe } from "../utils/fs.js";
 import type { CollectorContext } from "./context.js";
 import type { SkillsData } from "./data.js";
 import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
@@ -71,19 +71,18 @@ export async function collectSkills(ctx: CollectorContext): Promise<CollectorRes
       if (!entry.isDirectory) continue;
       const dir = path.join(skillsDir, entry.name);
       const skillMdPath = path.join(dir, "SKILL.md");
-      const read = await readTextFile(skillMdPath);
-      const hasSkillMd = read.ok && read.content !== null;
+      const hasSkillMd = await pathExists(skillMdPath);
       let name: string | null = entry.name;
 
       if (hasSkillMd) {
+        const read = await readTextFile(skillMdPath);
         const meta = read.content ? parseFrontmatter(read.content) : null;
         if (meta) name = asString(pick(meta, "name")) ?? entry.name;
 
         if (read.content) {
           for (const ref of extractReferences(read.content)) {
             const resolved = path.resolve(dir, ref);
-            const refStat = await statSafe(resolved);
-            if (refStat === null) {
+            if (!(await pathExists(resolved))) {
               brokenRefs.push({ sourceSkill: name ?? entry.name, referencedPath: ref, reason: "referenced path does not exist" });
             }
           }
@@ -95,19 +94,7 @@ export async function collectSkills(ctx: CollectorContext): Promise<CollectorRes
       skills.push({ dir, name, hasSkillMd });
     }
 
-    let matches: string[] = [];
-    try {
-      matches = await fg(["**/*"], {
-        cwd: skillsDir,
-        onlyFiles: true,
-        dot: false,
-        followSymbolicLinks: false,
-      });
-    } catch (err) {
-      acc.warnings.push(
-        `Error scanning skills directory for large files: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
+    const matches = await fg(["**/*"], { cwd: skillsDir, onlyFiles: true, dot: false, followSymbolicLinks: false, suppressErrors: true });
     for (const rel of matches) {
       const abs = path.join(skillsDir, rel);
       const stat = await statSafe(abs);

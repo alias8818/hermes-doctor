@@ -203,26 +203,6 @@ export function redactDeep(
       visited.add(node);
       return node.map(walk);
     }
-    if (node instanceof Map) {
-      if (visited.has(node)) return "[Circular]";
-      visited.add(node);
-      const result: Record<string, unknown> = {};
-      for (const [key, value] of node) {
-        result[typeof key === "string" ? key : String(key)] = walk(value);
-      }
-      return result;
-    }
-    if (node instanceof Set) {
-      if (visited.has(node)) return "[Circular]";
-      visited.add(node);
-      return [...node].map(walk);
-    }
-    if (node instanceof Date) {
-      return node.toISOString();
-    }
-    if (typeof Buffer !== "undefined" && Buffer.isBuffer(node)) {
-      return node.toString("hex");
-    }
     if (node !== null && typeof node === "object") {
       if (visited.has(node)) return "[Circular]";
       visited.add(node);
