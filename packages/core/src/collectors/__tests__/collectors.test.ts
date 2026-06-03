@@ -129,7 +129,7 @@ describe("providers collector", () => { /* keep original tests */
 
 describe("mcp collector", () => { /* keep original mcp tests */
   it("statically analyzes servers without executing them", async () => {
-    const dir = await home({ "config.yaml": "mcp:\n  servers:\n    - name: fs\n      command: node ./server.js\n      transport: stdio\n      env:\n        - FS_TOKEN\n    - name: bogus\n      command: definitely-not-a-real-binary-xyz\n" });
+    const dir = await home({ "config.yaml": "mcp:\n  servers:\n    - name: fs\n      command: echo ./server.js\n      transport: stdio\n      env:\n        - FS_TOKEN\n    - name: bogus\n      command: definitely-not-a-real-binary-xyz\n" });
     const result = await collectMcp(ctxFor(dir));
     expect(result.status).toBe("collected");
     const fs = result.data.servers?.find((s) => s.name === "fs");

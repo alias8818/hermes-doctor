@@ -747,8 +747,7 @@ describe("Default scan with auto-detected Hermes home", () => {
 // Threshold Validation (#23, #26)
 // ---------------------------------------------------------------------------
 
-// TODO(#23, #26): Re-enable when threshold validation is re-implemented in scan.ts
-describe.skip("Threshold flag validation", () => {
+describe("Threshold flag validation (#23, #26)", () => {
   const fixturePath = resolve(fixturesDir, "hermes-good");
 
   it("--huge-file-threshold with negative value exits 1 (#23)", async () => {

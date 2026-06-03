@@ -55,7 +55,7 @@ export function createCollectorContext(
   const hermesBin = path.join(home, "bin");
   const safeEnv = {
     ...env,
-    PATH: [hermesBin, env.PATH ?? ""].join(delim),
+    PATH: [hermesBin, env.PATH].filter(Boolean).join(delim),
   };
 
   return {

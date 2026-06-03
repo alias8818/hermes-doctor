@@ -302,7 +302,7 @@ export function renderConsole(report: DoctorReport, options: ConsoleRenderOption
       for (const insight of flueInsights.insights) {
         lines.push(`  ${pc.bold(insight.findingId)}`);
         // eslint-disable-next-line no-control-regex
-        lines.push(`    ${insight.insight.replace(/\u001B\[[0-9;]*[A-Za-z]/g, "")}`);
+        lines.push(`    ${stripAnsi(insight.insight)}`);
         lines.push("");
       }
     }

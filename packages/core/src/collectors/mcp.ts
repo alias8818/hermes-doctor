@@ -7,10 +7,11 @@ import {
   loadHermesConfig,
   pick,
 } from "../utils/config.js";
+import { envForTrustedProbes } from "../utils/trusted-path.js";
 import { executableFromCommand, findExecutable } from "../utils/which.js";
 import type { CollectorContext } from "./context.js";
 import type { McpData } from "./data.js";
-import { addEvidence, finalize, newAccumulator, runArea } from "./result.js";
+import { addEvidence, finalize, runArea } from "./result.js";
 
 const EMPTY: McpData = {};
 
@@ -142,8 +143,7 @@ function toolsFilter(
 export async function collectMcp(
   ctx: CollectorContext,
 ): Promise<CollectorResult<McpData>> {
-  return runArea("mcp", EMPTY, ctx.redaction, async () => {
-    const acc = newAccumulator();
+  return runArea("mcp", EMPTY, ctx.redaction, async (acc) => {
     const config = await loadHermesConfig(ctx.paths.config);
     const rawServers = extractServers(config.parsed);
 
@@ -173,7 +173,7 @@ export async function collectMcp(
           const executable = executableFromCommand(command);
           executableFound =
             executable !== null &&
-            (await findExecutable(executable, ctx.env)) !== null;
+            (await findExecutable(executable, envForTrustedProbes(ctx.env))) !== null;
         }
       }
 
