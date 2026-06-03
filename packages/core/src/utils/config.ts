@@ -1,6 +1,10 @@
+import * as path from "node:path";
+
 import { parse as parseYaml } from "yaml";
 
-import { readTextFile } from "./fs.js";
+import { readTextFile, statSafe } from "./fs.js";
+
+const MAX_CONFIG_SIZE = 10 * 1024 * 1024;
 
 export interface LoadedConfig {
   path: string;
@@ -14,6 +18,18 @@ export interface LoadedConfig {
 export async function loadHermesConfig(
   configPath: string,
 ): Promise<LoadedConfig> {
+  const configStat = await statSafe(configPath);
+  if (configStat !== null && configStat.size > MAX_CONFIG_SIZE) {
+    return {
+      path: configPath,
+      exists: true,
+      raw: null,
+      parsed: null,
+      valid: false,
+      error: `config file exceeds maximum size of ${MAX_CONFIG_SIZE / 1024 / 1024}MB`,
+    };
+  }
+
   const read = await readTextFile(configPath);
   if (!read.ok || read.content === null) {
     return {
@@ -63,17 +79,12 @@ export function parseEnvFile(content: string): Record<string, string> {
   for (const rawLine of content.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith("#")) continue;
-    const withoutExport = line.startsWith("export ")
-      ? line.slice("export ".length)
-      : line;
+    const withoutExport = line.startsWith("export ") ? line.slice("export ".length) : line;
     const eq = withoutExport.indexOf("=");
     if (eq <= 0) continue;
     const key = withoutExport.slice(0, eq).trim();
     let value = withoutExport.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1);
     }
     if (key.length > 0) result[key] = value;
@@ -104,10 +115,7 @@ export function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-export function pick(
-  record: Record<string, unknown> | null,
-  ...keys: string[]
-): unknown {
+export function pick(record: Record<string, unknown> | null, ...keys: string[]): unknown {
   if (!record) return undefined;
   for (const key of keys) {
     if (key in record && record[key] !== undefined) {
@@ -115,4 +123,13 @@ export function pick(
     }
   }
   return undefined;
+}
+
+export function resolveSubpath(homeDir: string, configuredDir: string): string | null {
+  const resolved = path.resolve(homeDir, configuredDir);
+  const normalizedHome = path.resolve(homeDir);
+  if (resolved !== normalizedHome && !resolved.startsWith(normalizedHome + path.sep)) {
+    return null;
+  }
+  return resolved;
 }

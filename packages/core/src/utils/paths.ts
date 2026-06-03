@@ -17,11 +17,18 @@ export interface ResolveHomeOptions {
   env?: NodeJS.ProcessEnv;
 }
 
+function expandTilde(p: string): string {
+  if (p.startsWith("~")) {
+    return path.join(os.homedir(), p.slice(1));
+  }
+  return p;
+}
+
 export function resolveHermesHome(options: ResolveHomeOptions = {}): string {
   const env = options.env ?? process.env;
   const explicit = options.hermesHome ?? env.HERMES_HOME ?? null;
   if (explicit && explicit.length > 0) {
-    return path.resolve(explicit);
+    return path.resolve(expandTilde(explicit));
   }
   return path.join(os.homedir(), ".hermes");
 }

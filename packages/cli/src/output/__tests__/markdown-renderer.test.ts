@@ -245,4 +245,45 @@ describe("markdown renderer", () => {
     const output = renderMarkdown(report);
     expect(output).not.toContain("Flue Insights");
   });
+
+  it("escapeMd escapes angle brackets, tildes, dashes, plus signs, exclamation marks, and parentheses (#48)", () => {
+    const findings: DoctorFinding[] = [
+      {
+        id: "escape-test",
+        area: "security",
+        status: "info",
+        severity: 0,
+        title: "<script>alert('xss')</script>",
+        message: "Strikethrough ~~text~~ and list - item + plus !not image (parens)",
+        evidence: {
+          key: "<dangerous> ~~strike~~ -dash +plus !exclaim (parens)",
+        },
+        fixes: [],
+        details: null,
+      },
+    ];
+    const report = buildReport(findings);
+    const output = renderMarkdown(report);
+
+    // HTML angle brackets should be escaped
+    expect(output).toContain("\\<script\\>alert('xss')\\</script\\>");
+    // Strikethrough tildes should be escaped
+    expect(output).toContain("\\~\\~text\\~\\~");
+    // List dash should be escaped
+    expect(output).toContain("\\- item \\-dash");
+    // Plus sign should be escaped
+    expect(output).toContain("\\+plus");
+    // Exclamation mark should be escaped
+    expect(output).toContain("\\!not image");
+    expect(output).toContain("\\!(parens)");
+    // Parentheses should be escaped
+    expect(output).toContain("\\(parens\\)");
+    // Evidence value should also be escaped
+    expect(output).toContain("\\<dangerous\\>");
+    expect(output).toContain("\\~\\~strike\\~\\~");
+    expect(output).toContain("\\-dash");
+    expect(output).toContain("\\+plus");
+    expect(output).toContain("\\!exclaim");
+    expect(output).toContain("\\(parens\\)");
+  });
 });

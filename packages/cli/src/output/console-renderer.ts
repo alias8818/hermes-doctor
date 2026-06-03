@@ -28,6 +28,14 @@ export interface ConsoleRenderOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Strip terminal control sequences
+// ---------------------------------------------------------------------------
+function stripAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\[[0-9;]*[A-Za-z]/g, "");
+}
+
+// ---------------------------------------------------------------------------
 // Severity → color helper
 // ---------------------------------------------------------------------------
 function colorForSeverity(
@@ -192,12 +200,12 @@ export function renderConsole(report: DoctorReport, options: ConsoleRenderOption
 
     for (const finding of group.items) {
       lines.push(
-        `  ${badge(finding.status)}  ${pc.bold(finding.title)}`,
+        `  ${badge(finding.status)}  ${pc.bold(stripAnsi(finding.title))}`,
       );
-      lines.push(`       ${finding.message}`);
+      lines.push(`       ${stripAnsi(finding.message)}`);
 
       if (finding.details) {
-        lines.push(`       ${pc.dim(finding.details)}`);
+        lines.push(`       ${pc.dim(stripAnsi(finding.details))}`);
       }
 
       // Evidence
@@ -210,8 +218,8 @@ export function renderConsole(report: DoctorReport, options: ConsoleRenderOption
         lines.push(`       ${pc.underline("Evidence:")}`);
         if (Array.isArray(evidenceData)) {
           for (const item of evidenceData as Array<Record<string, unknown>>) {
-            const label = String(item.label ?? "");
-            const detail = String(item.detail ?? "");
+            const label = stripAnsi(String(item.label ?? ""));
+            const detail = stripAnsi(String(item.detail ?? ""));
             const parts = [detail];
             if (item.source) parts.push(`[source: ${String(item.source)}]`);
             if (item.confidence) parts.push(`[confidence: ${String(item.confidence)}]`);
@@ -220,7 +228,7 @@ export function renderConsole(report: DoctorReport, options: ConsoleRenderOption
           }
         } else {
           for (const [key, value] of evidenceEntries as Array<[string, unknown]>) {
-            const display = typeof value === "string" ? value : JSON.stringify(value);
+            const display = typeof value === "string" ? stripAnsi(value) : JSON.stringify(value);
             lines.push(`         ${key}: ${display}`);
           }
         }

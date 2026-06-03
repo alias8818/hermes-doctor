@@ -742,3 +742,77 @@ describe("Default scan with auto-detected Hermes home", () => {
     expect(result.stderr).not.toMatch(STACK_TRACE_RE);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Threshold Validation (#23, #26)
+// ---------------------------------------------------------------------------
+
+describe("Threshold flag validation", () => {
+  const fixturePath = resolve(fixturesDir, "hermes-good");
+
+  it("--huge-file-threshold with negative value exits 1 (#23)", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--huge-file-threshold", "-1",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("non-negative");
+  });
+
+  it("--memory-warn-threshold with negative value exits 1 (#23)", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--memory-warn-threshold", "-50",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("non-negative");
+  });
+
+  it("--crash-loop-error-threshold with negative value exits 1 (#23)", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--crash-loop-error-threshold", "-10",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("non-negative");
+  });
+
+  it("--huge-file-threshold with non-numeric value exits 1 (#26)", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--huge-file-threshold", "abc",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("must be a number");
+  });
+
+  it("--dashboard-timeout with non-numeric value exits 1 (#26)", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--dashboard-timeout", "not-a-number",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("must be a number");
+  });
+
+  it("--max-log-lines with non-numeric value exits 1 (#26)", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--max-log-lines", "abc",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("must be a number");
+  });
+
+  it("valid threshold values are accepted", async () => {
+    const result = await runCli([
+      "scan", "--hermes-home", fixturePath,
+      "--huge-file-threshold", "50",
+      "--memory-warn-threshold", "90",
+      "--format", "json",
+    ]);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.summary).toBeDefined();
+  });
+});

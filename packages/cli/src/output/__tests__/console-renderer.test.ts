@@ -202,4 +202,58 @@ describe("console renderer", () => {
     const output = renderConsole(report);
     expect(output).not.toContain("Flue Insights");
   });
+
+  it("strips ANSI escape sequences from evidence values (#34)", () => {
+    const findings: DoctorFinding[] = [
+      {
+        id: "ansi-test",
+        area: "security",
+        status: "warning",
+        severity: 2,
+        title: "Test \x1b[31mRed Title\x1b[0m",
+        message: "Message with \x1b[32mgreen\x1b[0m text",
+        evidence: {
+          key1: "value with \x1b[31mred\x1b[0m text",
+          key2: "normal value",
+        },
+        fixes: [],
+        details: "Details with \x1b[33myellow\x1b[0m text",
+      },
+    ];
+    const report = buildReport(findings);
+    const output = renderConsole(report);
+
+    // ANSI sequences should be stripped from title, message, details and evidence
+    expect(output).toContain("Test Red Title");
+    expect(output).not.toContain("\x1b[31m");
+    expect(output).toContain("Message with green text");
+    expect(output).toContain("value with red text");
+    expect(output).toContain("normal value");
+    expect(output).toContain("Details with yellow text");
+  });
+
+  it("strips ANSI from array evidence label and detail (#34)", () => {
+    const findings: DoctorFinding[] = [
+      {
+        id: "ansi-array",
+        area: "security",
+        status: "info",
+        severity: 0,
+        title: "Array evidence",
+        message: "test",
+        evidence: [
+          { label: "\x1b[31mlabel\x1b[0m", detail: "\x1b[32mdetail\x1b[0m", source: "test" },
+        ],
+        fixes: [],
+        details: null,
+      },
+    ];
+    const report = buildReport(findings);
+    const output = renderConsole(report);
+
+    expect(output).toContain("label");
+    expect(output).toContain("detail");
+    expect(output).not.toContain("\x1b[31m");
+    expect(output).not.toContain("\x1b[32m");
+  });
 });

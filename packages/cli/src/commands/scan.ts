@@ -44,9 +44,16 @@ export interface ResolvedHermesHome {
   readable: boolean;
 }
 
+function expandTilde(p: string): string {
+  if (p.startsWith("~")) {
+    return path.join(os.homedir(), p.slice(1));
+  }
+  return p;
+}
+
 function resolveHermesHome(cliPath?: string): ResolvedHermesHome {
   const target = cliPath ?? process.env.HERMES_HOME ?? path.join(os.homedir(), ".hermes");
-  const resolved = path.resolve(target);
+  const resolved = path.resolve(expandTilde(target));
   let exists = false
   let readable = false
   try {
@@ -217,6 +224,42 @@ function collectFormats(value: string, previous: string[]): string[] {
 }
 
 /**
+ * Parse a numeric CLI option string, validating it's a finite non-negative number.
+ * On failure, prints an error message and sets process.exitCode to 1.
+ * Returns the parsed number on success, or undefined on failure.
+ */
+function parseNumericOption(
+  value: string | undefined,
+  flagName: string,
+  allowZero?: boolean,
+): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || isNaN(parsed)) {
+    process.stderr.write(
+      `Error: --${flagName} must be a number, got '${value}'\n`,
+    );
+    process.exitCode = 1;
+    return undefined;
+  }
+  if (parsed < 0) {
+    process.stderr.write(
+      `Error: --${flagName} must be a non-negative number, got ${parsed}\n`,
+    );
+    process.exitCode = 1;
+    return undefined;
+  }
+  if (!allowZero && parsed === 0) {
+    process.stderr.write(
+      `Error: --${flagName} must be a positive number, got 0\n`,
+    );
+    process.exitCode = 1;
+    return undefined;
+  }
+  return parsed;
+}
+
+/**
  * Parse CLI threshold options into a Thresholds object.
  * Returns undefined if no thresholds were explicitly set,
  * so the core's defaults apply downstream.
@@ -226,32 +269,53 @@ function parseThresholds(options: ScanOptions): Partial<Thresholds> | undefined 
   let hasAny = false;
 
   if (options.memoryWarnThreshold !== undefined) {
-    partial.memoryWarnPercent = parseInt(options.memoryWarnThreshold, 10);
-    hasAny = true;
+    const val = parseNumericOption(options.memoryWarnThreshold, "memory-warn-threshold");
+    if (val !== undefined) {
+      partial.memoryWarnPercent = val;
+      hasAny = true;
+    }
   }
   if (options.memoryCriticalThreshold !== undefined) {
-    partial.memoryCriticalPercent = parseInt(options.memoryCriticalThreshold, 10);
-    hasAny = true;
+    const val = parseNumericOption(options.memoryCriticalThreshold, "memory-critical-threshold");
+    if (val !== undefined) {
+      partial.memoryCriticalPercent = val;
+      hasAny = true;
+    }
   }
   if (options.hugeFileThreshold !== undefined) {
-    partial.hugeFileBytes = parseInt(options.hugeFileThreshold, 10) * 1024 * 1024;
-    hasAny = true;
+    const val = parseNumericOption(options.hugeFileThreshold, "huge-file-threshold");
+    if (val !== undefined) {
+      partial.hugeFileBytes = val * 1024 * 1024;
+      hasAny = true;
+    }
   }
   if (options.crashLoopErrorThreshold !== undefined) {
-    partial.crashLoopErrorCount = parseInt(options.crashLoopErrorThreshold, 10);
-    hasAny = true;
+    const val = parseNumericOption(options.crashLoopErrorThreshold, "crash-loop-error-threshold");
+    if (val !== undefined) {
+      partial.crashLoopErrorCount = val;
+      hasAny = true;
+    }
   }
   if (options.crashLoopRecentThreshold !== undefined) {
-    partial.crashLoopRecentErrors = parseInt(options.crashLoopRecentThreshold, 10);
-    hasAny = true;
+    const val = parseNumericOption(options.crashLoopRecentThreshold, "crash-loop-recent-threshold");
+    if (val !== undefined) {
+      partial.crashLoopRecentErrors = val;
+      hasAny = true;
+    }
   }
   if (options.largeFileThreshold !== undefined) {
-    partial.largeFileBytes = parseInt(options.largeFileThreshold, 10) * 1024;
-    hasAny = true;
+    const val = parseNumericOption(options.largeFileThreshold, "large-file-threshold");
+    if (val !== undefined) {
+      partial.largeFileBytes = val * 1024;
+      hasAny = true;
+    }
   }
   if (options.skillsLargeFileThreshold !== undefined) {
-    partial.skillsLargeFileBytes = parseInt(options.skillsLargeFileThreshold, 10) * 1024;
-    hasAny = true;
+    const val = parseNumericOption(options.skillsLargeFileThreshold, "skills-large-file-threshold");
+    if (val !== undefined) {
+      partial.skillsLargeFileBytes = val * 1024;
+      hasAny = true;
+    }
   }
 
   return hasAny ? partial : undefined;
@@ -287,24 +351,22 @@ async function executeScan(options: ScanOptions): Promise<void> {
   const flueEnabled = shouldEnableFlue(options);
 
   // Parse --max-log-lines
-  const maxLogLines = options.maxLogLines
-    ? parseInt(options.maxLogLines, 10)
-    : 500;
+  const maxLogLines = parseNumericOption(options.maxLogLines, "max-log-lines", true) ?? 500;
+  if (process.exitCode !== 0) return;
 
   // Parse diagnostic thresholds from CLI flags
   const thresholds = parseThresholds(options);
 
   // Parse --dashboard-timeout
-  const dashboardTimeoutMs = options.dashboardTimeout
-    ? parseInt(options.dashboardTimeout, 10)
-    : undefined;
+  const dashboardTimeoutMs = parseNumericOption(options.dashboardTimeout, "dashboard-timeout", true);
+  if (process.exitCode !== 0) return;
 
   // Step 1: Run all collectors with all options
   const collectorResults = await collectAll({
     hermesHome: hermesHome.path,
     profile,
     includeLogSnippets: options.includeLogSnippets ?? false,
-    maxLogLines: isNaN(maxLogLines) ? 500 : maxLogLines,
+    maxLogLines,
     strictRedaction: options.strictRedaction ?? false,
     thresholds,
     dashboardTimeoutMs,

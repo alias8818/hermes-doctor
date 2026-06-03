@@ -133,7 +133,9 @@ export async function collectDashboard(
     };
 
     if (url && isLocalhost) {
-      const probe = await probeHttp(url, ctx.dashboardTimeoutMs);
+      const probe = await probeHttp(url, ctx.dashboardTimeoutMs, {
+        rejectUnauthorized: false,
+      });
       data.probed = true;
       data.reachable = probe.reachable;
       data.statusCode = probe.statusCode;

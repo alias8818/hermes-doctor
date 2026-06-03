@@ -74,7 +74,7 @@ function groupFindings(findings: DoctorFinding[]): FindingGroup[] {
 // ---------------------------------------------------------------------------
 function escapeMd(text: string): string {
   // Neutralize markdown syntax in untrusted evidence / Flue text (including links/images).
-  return text.replace(/([\\|*_`#[\]])/g, "\\$1");
+  return text.replace(/([\\|*_`#[\]<>~\-+!)])/g, "\\$1");
 }
 
 /** Strip terminal control sequences from Flue output. */
