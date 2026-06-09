@@ -20,7 +20,7 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@flue/runtime": "^0.9.0",
+    "@flue/runtime": "^0.10.1",
     "@hermes-doctor/core": "workspace:*",
     "valibot": "^1.4.1"
   }
